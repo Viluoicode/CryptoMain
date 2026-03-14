@@ -1,0 +1,18 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using CryptoDashboard.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace CryptoDashboard.Application.Interfaces
+{
+    public interface  IApplicationDbContext
+    {
+        DbSet<User> Users { get; }
+        DbSet<Wallet> Wallets { get; }
+        DbSet<Transaction> Transactions { get; }  // ← Phải có dòng này
+        Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    }
+}
