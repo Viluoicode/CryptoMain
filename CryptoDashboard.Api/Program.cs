@@ -1,11 +1,17 @@
 ﻿using CryptoDashboard.Application.Interfaces;
+using CryptoDashboard.Application.Options;
+using CryptoDashboard.Api.Middleware;
 using CryptoDashboard.Infrastructure.Persistence;
 using CryptoDashboard.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Http;
 using Microsoft.IdentityModel.Tokens;
+using System.Net;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +33,11 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IPortfolioService, PortfolioService>();
+
+// CryptoApi Options
+var cryptoApiSection = builder.Configuration.GetSection(CryptoApiOptions.SectionName);
+builder.Services.Configure<CryptoApiOptions>(cryptoApiSection);
+var cryptoApiOptions = cryptoApiSection.Get<CryptoApiOptions>() ?? new CryptoApiOptions();
 
 // JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -113,12 +124,15 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 
-// Crypto Service
+// Crypto Service with Polly Resilience Policies
 builder.Services.AddHttpClient<ICryptoService, CryptoService>(client =>
 {
+    client.BaseAddress = new Uri(cryptoApiOptions.BaseUrl);
     client.DefaultRequestHeaders.Add("User-Agent", "CryptoDashboard/1.0 (Learning Project)");
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
+    client.Timeout = TimeSpan.FromSeconds(cryptoApiOptions.TimeoutSeconds);
+})
+.AddPolicyHandler(GetRetryPolicy(cryptoApiOptions))
+.AddPolicyHandler(GetCircuitBreakerPolicy());
 
 var app = builder.Build();
 
@@ -129,6 +143,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Global Exception Handling — must be early in the pipeline
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
@@ -136,3 +153,41 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// --- Polly Policy Factories ---
+
+static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(CryptoApiOptions options)
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(msg => msg.StatusCode == HttpStatusCode.TooManyRequests)
+        .WaitAndRetryAsync(
+            retryCount: options.RetryCount,
+            sleepDurationProvider: (retryAttempt, response, _) =>
+            {
+                // Honor Retry-After header if present
+                if (response.Result?.Headers.RetryAfter?.Delta is TimeSpan retryAfter)
+                {
+                    return retryAfter;
+                }
+                // Exponential backoff with jitter
+                var baseDelay = TimeSpan.FromMilliseconds(options.RetryBaseDelayMs);
+                var exponentialDelay = baseDelay * Math.Pow(2, retryAttempt - 1);
+                var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 500));
+                return exponentialDelay + jitter;
+            },
+            onRetryAsync: (outcome, timespan, retryAttempt, _) =>
+            {
+                return Task.CompletedTask;
+            });
+}
+
+static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(msg => msg.StatusCode == HttpStatusCode.TooManyRequests)
+        .CircuitBreakerAsync(
+            handledEventsAllowedBeforeBreaking: 5,
+            durationOfBreak: TimeSpan.FromSeconds(30));
+}
