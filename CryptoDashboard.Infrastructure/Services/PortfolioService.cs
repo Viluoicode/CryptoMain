@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CryptoDashboard.Application.DTOs.Crypto;
 using CryptoDashboard.Application.DTOs.Portfolio;
 using CryptoDashboard.Application.Interfaces;
 using CryptoDashboard.Domain.Entities;
@@ -49,7 +50,16 @@ namespace CryptoDashboard.Infrastructure.Services
 
             // Batch fetch all coin prices in a single API call (fixes N+1 problem)
             var coinIds = grouped.Select(g => g.CoinId).Distinct().ToList();
-            var coinDataMap = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds);
+            Dictionary<string, CryptoListResponse> coinDataMap;
+            try
+            {
+                coinDataMap = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds);
+            }
+            catch
+            {
+                // Fallback: empty map — prices will default to 0
+                coinDataMap = new Dictionary<string, CryptoListResponse>();
+            }
 
             var allocations = new List<PortfolioCoinAllocationResponse>();
 

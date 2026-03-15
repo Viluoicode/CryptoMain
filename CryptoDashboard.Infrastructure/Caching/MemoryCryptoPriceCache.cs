@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace CryptoDashboard.Infrastructure.Caching
 {
-    public class MemoryCryptoPriceCache : ICryptoPriceCache
+    public class MemoryCryptoPriceCache : ICryptoPriceCache, IDisposable
     {
         private readonly IMemoryCache _cache;
         private readonly TimeSpan _defaultTtl;
@@ -49,6 +49,9 @@ namespace CryptoDashboard.Infrastructure.Caching
 
         public Task<Dictionary<string, decimal>> GetBatchPricesAsync(IEnumerable<string> coinIds)
         {
+            // IMemoryCache is thread-safe for individual reads. The semaphore on SetBatchPricesAsync
+            // ensures batch write atomicity; reads may see partially updated batches, which is
+            // acceptable since each individual price entry is still consistent.
             var result = new Dictionary<string, decimal>();
 
             foreach (var coinId in coinIds)
@@ -101,6 +104,12 @@ namespace CryptoDashboard.Infrastructure.Caching
             // Individual entries will expire via their TTL.
             _logger.LogDebug("Cache INVALIDATE ALL requested — entries will expire via TTL");
             return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            _semaphore.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

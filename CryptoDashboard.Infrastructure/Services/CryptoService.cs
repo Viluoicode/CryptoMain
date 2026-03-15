@@ -132,7 +132,8 @@ namespace CryptoDashboard.Infrastructure.Services
 
                     // Update price cache with newly fetched prices
                     var newPrices = fetchedData.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.CurrentPrice);
-                    await _priceCache.SetBatchPricesAsync(newPrices);
+                    var cacheTtl = TimeSpan.FromSeconds(_options.CacheTtlSeconds);
+                    await _priceCache.SetBatchPricesAsync(newPrices, cacheTtl);
                 }
             }
 

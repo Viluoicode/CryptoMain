@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CryptoDashboard.Application.DTOs.Crypto;
 using CryptoDashboard.Application.DTOs.Wallet;
 using CryptoDashboard.Application.Interfaces;
 using CryptoDashboard.Domain.Entities;
@@ -153,7 +154,7 @@ namespace CryptoDashboard.Infrastructure.Services
 
             // Batch fetch all coin prices in a single API call (fixes N+1 problem)
             var coinIds = grouped.Select(g => g.CoinId).Distinct().ToList();
-            Dictionary<string, CryptoDashboard.Application.DTOs.Crypto.CryptoListResponse> coinDataMap;
+            Dictionary<string, CryptoListResponse> coinDataMap;
             try
             {
                 coinDataMap = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds);
@@ -161,7 +162,7 @@ namespace CryptoDashboard.Infrastructure.Services
             catch
             {
                 // Fallback: empty map — will use avgBuyPrice below
-                coinDataMap = new Dictionary<string, CryptoDashboard.Application.DTOs.Crypto.CryptoListResponse>();
+                coinDataMap = new Dictionary<string, CryptoListResponse>();
             }
 
             var holdings = new List<HoldingResponse>();
