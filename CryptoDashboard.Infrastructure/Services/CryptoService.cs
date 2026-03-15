@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace CryptoDashboard.Infrastructure.Services
 {
-    public class CryptoService : ICryptoService
+    public class CryptoService : ICryptoService, IDisposable
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;
@@ -156,6 +156,12 @@ namespace CryptoDashboard.Infrastructure.Services
             _logger.LogWarning("CoinGecko API returned {StatusCode} for {Url}", statusCode, url);
             throw new CryptoApiException(
                 $"Crypto API returned an error (HTTP {statusCode}).", statusCode);
+        }
+
+        public void Dispose()
+        {
+            _rateLimiter.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         private static CryptoListResponse MapToResponse(CoinGeckoResponse c)

@@ -127,7 +127,6 @@ builder.Services.AddMemoryCache();
 // Crypto Service with Polly Resilience Policies
 builder.Services.AddHttpClient<ICryptoService, CryptoService>(client =>
 {
-    client.BaseAddress = new Uri(cryptoApiOptions.BaseUrl);
     client.DefaultRequestHeaders.Add("User-Agent", "CryptoDashboard/1.0 (Learning Project)");
     client.Timeout = TimeSpan.FromSeconds(cryptoApiOptions.TimeoutSeconds);
 })
