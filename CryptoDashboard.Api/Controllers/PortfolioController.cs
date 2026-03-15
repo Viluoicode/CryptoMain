@@ -10,26 +10,35 @@ namespace CryptoDashboard.Api.Controllers
     [Authorize]
     public class PortfolioController : ControllerBase
     {
-      private readonly IPortfolioService _portfolioService;
-      
+        private readonly IPortfolioService _portfolioService;
+
         public PortfolioController(IPortfolioService portfolioService)
         {
             _portfolioService = portfolioService;
         }
+
+        /// <summary>
+        /// Lấy tổng quan portfolio (allocations, P&L)
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetSummary()
         {
             var userId = GetCurrentUserId();
-            var result = await _portfolioService.GetPortfolioPerformanceAsync(userId);
+            var result = await _portfolioService.GetPortfolioSummaryAsync(userId);
             return Ok(result);
         }
-        [HttpGet("performance")] // <- endpoint bạn đang thiếu
+
+        /// <summary>
+        /// Lấy hiệu suất portfolio (buy/sell amounts, unrealized P&L)
+        /// </summary>
+        [HttpGet("performance")]
         public async Task<IActionResult> GetPerformance()
         {
             var userId = GetCurrentUserId();
             var result = await _portfolioService.GetPortfolioPerformanceAsync(userId);
             return Ok(result);
         }
+
         private Guid GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

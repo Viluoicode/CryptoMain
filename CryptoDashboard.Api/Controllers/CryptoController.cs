@@ -32,11 +32,11 @@ namespace CryptoDashboard.Api.Controllers
                 {
                     return StatusCode(500, new { message = "Failed to fetch crypto data", error = ex.Message });
                 }
-                /// <summary>
-                /// Lấy thông tin chi tiết của 1 coin
-                /// </summary>
-                /// 
             }
+
+            /// <summary>
+            /// Lấy thông tin chi tiết của 1 coin
+            /// </summary>
             [HttpGet("{coinId}")]
             public async Task<IActionResult> GetCryptocurrencyById(string coinId)
             {
