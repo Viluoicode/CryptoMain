@@ -15,21 +15,23 @@ namespace CryptoDashboard.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;
+        private readonly ICryptoPriceCache _priceCache;
         private readonly CryptoApiOptions _options;
         private readonly ILogger<CryptoService> _logger;
         private readonly RateLimiter _rateLimiter;
 
-        private const string CacheKey = "TopCryptos";
-        private const int CacheDurationSeconds = 60;
+        private const string TopCryptosCacheKey = "TopCryptos";
 
         public CryptoService(
             HttpClient httpClient,
             IMemoryCache cache,
+            ICryptoPriceCache priceCache,
             IOptions<CryptoApiOptions> options,
             ILogger<CryptoService> logger)
         {
             _httpClient = httpClient;
             _cache = cache;
+            _priceCache = priceCache;
             _options = options.Value;
             _logger = logger;
 
@@ -46,7 +48,7 @@ namespace CryptoDashboard.Infrastructure.Services
 
         public async Task<List<CryptoListResponse>> GetTopCryptocurrenciesAsync(int limit = 50)
         {
-            if (_cache.TryGetValue(CacheKey, out List<CryptoListResponse>? cachedData) && cachedData != null)
+            if (_cache.TryGetValue(TopCryptosCacheKey, out List<CryptoListResponse>? cachedData) && cachedData != null)
             {
                 return cachedData;
             }
@@ -68,26 +70,94 @@ namespace CryptoDashboard.Infrastructure.Services
                 .Select(MapToResponse)
                 .ToList();
 
-            _cache.Set(CacheKey, result, TimeSpan.FromSeconds(CacheDurationSeconds));
+            var cacheTtl = TimeSpan.FromSeconds(_options.CacheTtlSeconds);
+            _cache.Set(TopCryptosCacheKey, result, cacheTtl);
+
+            // Also populate the price cache for individual coins
+            var prices = result.ToDictionary(r => r.Id, r => r.CurrentPrice);
+            await _priceCache.SetBatchPricesAsync(prices, cacheTtl);
 
             return result;
         }
 
         public async Task<CryptoListResponse?> GetCryptocurrencyByIdAsync(string coinId)
         {
-            var url = $"{_options.BaseUrl}/coins/markets?vs_currency=usd&ids={Uri.EscapeDataString(coinId)}";
+            // Check price cache first — if hit, we can still need full data
+            // But for single coin, go directly to the batch method
+            var results = await GetCryptocurrenciesByIdsAsync(new[] { coinId });
+            results.TryGetValue(coinId, out var coinData);
+            return coinData;
+        }
 
-            var response = await SendRateLimitedRequestAsync(url);
-
-            var json = await response.Content.ReadAsStringAsync();
-            var coinGeckoData = JsonSerializer.Deserialize<List<CoinGeckoResponse>>(json);
-
-            if (coinGeckoData == null || !coinGeckoData.Any())
+        public async Task<Dictionary<string, CryptoListResponse>> GetCryptocurrenciesByIdsAsync(IEnumerable<string> coinIds)
+        {
+            var coinIdList = coinIds.Distinct().ToList();
+            if (coinIdList.Count == 0)
             {
-                return null;
+                return new Dictionary<string, CryptoListResponse>();
             }
 
-            return MapToResponse(coinGeckoData.First());
+            // L1: Check price cache for already-cached prices
+            var cachedPrices = await _priceCache.GetBatchPricesAsync(coinIdList);
+            var missingIds = coinIdList.Where(id => !cachedPrices.ContainsKey(id)).ToList();
+
+            if (missingIds.Count == 0)
+            {
+                _logger.LogDebug("All {Count} coin prices served from cache", coinIdList.Count);
+            }
+            else
+            {
+                _logger.LogDebug("{MissingCount}/{TotalCount} coin prices need API fetch",
+                    missingIds.Count, coinIdList.Count);
+            }
+
+            // L2: Fetch missing from CoinGecko API in a single batch call
+            var fetchedData = new Dictionary<string, CryptoListResponse>();
+            if (missingIds.Count > 0)
+            {
+                var ids = string.Join(",", missingIds.Select(Uri.EscapeDataString));
+                var url = $"{_options.BaseUrl}/coins/markets?vs_currency=usd&ids={ids}";
+
+                var response = await SendRateLimitedRequestAsync(url);
+                var json = await response.Content.ReadAsStringAsync();
+                var coinGeckoData = JsonSerializer.Deserialize<List<CoinGeckoResponse>>(json);
+
+                if (coinGeckoData != null)
+                {
+                    foreach (var coin in coinGeckoData.Where(c => c.CurrentPrice.HasValue))
+                    {
+                        var mapped = MapToResponse(coin);
+                        fetchedData[mapped.Id] = mapped;
+                    }
+
+                    // Update price cache with newly fetched prices
+                    var newPrices = fetchedData.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.CurrentPrice);
+                    await _priceCache.SetBatchPricesAsync(newPrices);
+                }
+            }
+
+            // Build combined result: use fetched data for missing, create minimal responses for cached
+            var result = new Dictionary<string, CryptoListResponse>();
+
+            foreach (var coinId in coinIdList)
+            {
+                if (fetchedData.TryGetValue(coinId, out var fetched))
+                {
+                    result[coinId] = fetched;
+                }
+                else if (cachedPrices.TryGetValue(coinId, out var cachedPrice))
+                {
+                    // We have a cached price but no full data from this call
+                    // Return a minimal response with the cached price
+                    result[coinId] = new CryptoListResponse
+                    {
+                        Id = coinId,
+                        CurrentPrice = cachedPrice
+                    };
+                }
+            }
+
+            return result;
         }
 
         private async Task<HttpResponseMessage> SendRateLimitedRequestAsync(string url)

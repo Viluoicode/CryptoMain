@@ -47,12 +47,16 @@ namespace CryptoDashboard.Infrastructure.Services
                 .Where(x => x.BuyQty > x.SellQty)
                 .ToList();
 
+            // Batch fetch all coin prices in a single API call (fixes N+1 problem)
+            var coinIds = grouped.Select(g => g.CoinId).Distinct().ToList();
+            var coinDataMap = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds);
+
             var allocations = new List<PortfolioCoinAllocationResponse>();
 
             foreach (var coin in grouped)
             {
                 var qty = coin.BuyQty - coin.SellQty;
-                var coinData = await _cryptoService.GetCryptocurrencyByIdAsync(coin.CoinId);
+                coinDataMap.TryGetValue(coin.CoinId, out var coinData);
                 var currentPrice = coinData?.CurrentPrice ?? 0m;
                 var currentValue = qty * currentPrice;
 
