@@ -8,11 +8,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CryptoDashboard.Application.Interfaces
 {
-    public interface  IApplicationDbContext
+    public interface IApplicationDbContext
     {
         DbSet<User> Users { get; }
         DbSet<Wallet> Wallets { get; }
-        DbSet<Transaction> Transactions { get; }  // ← Phải có dòng này
+        DbSet<Transaction> Transactions { get; }
+        DbSet<PriceHistory> PriceHistories { get; }
+        DbSet<PortfolioSnapshot> PortfolioSnapshots { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

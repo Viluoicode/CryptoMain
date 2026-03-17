@@ -14,6 +14,8 @@ namespace CryptoDashboard.Infrastructure.Persistence
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Wallet> Wallets { get; set; } = null!;
         public DbSet<Transaction> Transactions { get; set; } = null!;
+        public DbSet<PriceHistory> PriceHistories { get; set; } = null!;
+        public DbSet<PortfolioSnapshot> PortfolioSnapshots { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -35,7 +37,7 @@ namespace CryptoDashboard.Infrastructure.Persistence
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
 
-                entity.HasOne(e => e.Users)
+                entity.HasOne(e => e.User)
                       .WithMany(u => u.Wallets)
                       .HasForeignKey(e => e.UserId)
                       .OnDelete(DeleteBehavior.Cascade);
@@ -57,6 +59,34 @@ namespace CryptoDashboard.Infrastructure.Persistence
                       .WithMany(w => w.Transactions)
                       .HasForeignKey(e => e.WalletId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // PriceHistory configuration
+            modelBuilder.Entity<PriceHistory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CoinId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Price).HasPrecision(18, 8);
+                entity.Property(e => e.MarketCap).HasPrecision(28, 2);
+                entity.Property(e => e.Volume24h).HasPrecision(28, 2);
+
+                entity.HasIndex(e => new { e.CoinId, e.RecordedAt });
+            });
+
+            // PortfolioSnapshot configuration
+            modelBuilder.Entity<PortfolioSnapshot>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TotalValue).HasPrecision(18, 2);
+                entity.Property(e => e.TotalInvested).HasPrecision(18, 2);
+                entity.Property(e => e.ProfitLoss).HasPrecision(18, 2);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.UserId, e.SnapshotDate }).IsUnique();
             });
         }
 
