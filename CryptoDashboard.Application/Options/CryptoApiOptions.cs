@@ -11,5 +11,6 @@ namespace CryptoDashboard.Application.Options
         public int TimeoutSeconds { get; set; } = 30;
         public int RetryCount { get; set; } = 3;
         public int RetryBaseDelayMs { get; set; } = 1000;
+        public int CacheTtlSeconds { get; set; } = 120;
     }
 }

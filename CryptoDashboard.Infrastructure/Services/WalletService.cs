@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CryptoDashboard.Application.DTOs.Crypto;
 using CryptoDashboard.Application.DTOs.Wallet;
 using CryptoDashboard.Application.Interfaces;
 using CryptoDashboard.Domain.Entities;
@@ -151,6 +152,19 @@ namespace CryptoDashboard.Infrastructure.Services
                 .Where(x => x.BuyQuantity > x.SellQuantity) // Chỉ lấy coin còn nắm giữ
                 .ToList();
 
+            // Batch fetch all coin prices in a single API call (fixes N+1 problem)
+            var coinIds = grouped.Select(g => g.CoinId).Distinct().ToList();
+            Dictionary<string, CryptoListResponse> coinDataMap;
+            try
+            {
+                coinDataMap = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds);
+            }
+            catch
+            {
+                // Fallback: empty map — will use avgBuyPrice below
+                coinDataMap = new Dictionary<string, CryptoListResponse>();
+            }
+
             var holdings = new List<HoldingResponse>();
 
             foreach (var item in grouped)
@@ -158,18 +172,9 @@ namespace CryptoDashboard.Infrastructure.Services
                 var quantity = item.BuyQuantity - item.SellQuantity;
                 var avgBuyPrice = item.TotalInvested / item.BuyQuantity;
 
-                // Lấy giá hiện tại từ CoinGecko
-                var currentPrice = 0m;
-                try
-                {
-                    var coinData = await _cryptoService.GetCryptocurrencyByIdAsync(item.CoinId);
-                    currentPrice = coinData?.CurrentPrice ?? 0;
-                }
-                catch
-                {
-                    // Fallback nếu API fail
-                    currentPrice = avgBuyPrice;
-                }
+                // Get current price from batch result, fallback to avgBuyPrice
+                coinDataMap.TryGetValue(item.CoinId, out var coinData);
+                var currentPrice = coinData?.CurrentPrice ?? avgBuyPrice;
 
                 var currentValue = quantity * currentPrice;
                 var profitLoss = currentValue - (quantity * avgBuyPrice);

@@ -11,5 +11,6 @@ namespace CryptoDashboard.Application.Interfaces
     {
         Task<List<CryptoListResponse>> GetTopCryptocurrenciesAsync(int limit = 50);
         Task<CryptoListResponse?> GetCryptocurrencyByIdAsync(string coinId);
+        Task<Dictionary<string, CryptoListResponse>> GetCryptocurrenciesByIdsAsync(IEnumerable<string> coinIds);
     }
 }

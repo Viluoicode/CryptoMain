@@ -1,6 +1,7 @@
 ﻿using CryptoDashboard.Application.Interfaces;
 using CryptoDashboard.Application.Options;
 using CryptoDashboard.Api.Middleware;
+using CryptoDashboard.Infrastructure.Caching;
 using CryptoDashboard.Infrastructure.Persistence;
 using CryptoDashboard.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -123,6 +124,7 @@ builder.Services.AddControllersWithViews();
 // HttpClient Factory & Memory Cache
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICryptoPriceCache, MemoryCryptoPriceCache>();
 
 // Crypto Service with Polly Resilience Policies
 builder.Services.AddHttpClient<ICryptoService, CryptoService>(client =>
