@@ -16,7 +16,7 @@ export default function MainLayout() {
   const pageTitle = pageTitles[location.pathname] ?? 'Dashboard';
 
   return (
-    <div className="grid grid-cols-[260px_1fr] h-screen bg-slate-50 overflow-hidden">
+    <div className="grid grid-cols-[260px_1fr] h-screen bg-[#0B0E14] overflow-hidden">
       <Sidebar />
       <div className="flex flex-col overflow-hidden">
         <Header pageTitle={pageTitle} />
