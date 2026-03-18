@@ -3,7 +3,7 @@ import { mockUser, navItems } from '../../data/mockData';
 
 export default function Sidebar() {
   return (
-    <aside className="flex flex-col w-64 min-h-screen bg-slate-900 text-white shrink-0">
+    <aside className="flex flex-col w-[260px] h-screen bg-slate-900 text-white shrink-0 overflow-y-auto">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
         <div className="w-9 h-9 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-lg">
@@ -53,9 +53,9 @@ export default function Sidebar() {
                 to={item.path}
                 end={item.path === '/'}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40'
                       : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                   }`
                 }
@@ -76,9 +76,9 @@ export default function Sidebar() {
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40'
                       : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                   }`
                 }

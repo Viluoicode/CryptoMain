@@ -6,7 +6,7 @@ interface HeaderProps {
 
 export default function Header({ pageTitle }: HeaderProps) {
   return (
-    <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200 shrink-0">
+    <header className="sticky top-0 z-20 flex items-center justify-between px-8 py-4 bg-white border-b border-slate-200 shrink-0">
       {/* Page Title */}
       <div>
         <h1 className="text-xl font-semibold text-slate-800">{pageTitle}</h1>
