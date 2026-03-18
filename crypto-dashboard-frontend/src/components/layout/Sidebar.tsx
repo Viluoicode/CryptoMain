@@ -3,7 +3,7 @@ import { mockUser, navItems } from '../../data/mockData';
 
 export default function Sidebar() {
   return (
-    <aside className="flex flex-col w-[260px] h-screen bg-slate-900 text-white shrink-0 overflow-y-auto">
+    <aside className="flex flex-col w-[260px] h-screen bg-[#0D1017] text-white shrink-0 overflow-y-auto border-r border-slate-800">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
         <div className="w-9 h-9 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-lg">
