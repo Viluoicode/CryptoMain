@@ -74,7 +74,7 @@ export default function DashboardPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-800">My Holdings</h2>
-          <a href="/portfolio" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+          <a href="/analytics" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
             View All →
           </a>
         </div>
@@ -147,10 +147,10 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3">
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm ${
-                    tx.type === 'Buy' ? 'bg-emerald-500' : 'bg-red-500'
+                    tx.type === 'Buy' ? 'bg-emerald-500' : tx.type === 'Transfer' ? 'bg-sky-500' : 'bg-red-500'
                   }`}
                 >
-                  {tx.type === 'Buy' ? '↑' : '↓'}
+                  {tx.type === 'Buy' ? '↑' : tx.type === 'Transfer' ? '⇄' : '↓'}
                 </div>
                 <div>
                   <p className="font-semibold text-slate-800">
@@ -160,8 +160,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="text-right">
-                <p className={`font-bold text-sm ${tx.type === 'Buy' ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {tx.type === 'Buy' ? '+' : '-'}${tx.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                <p className={`font-bold text-sm ${tx.type === 'Buy' ? 'text-emerald-600' : tx.type === 'Transfer' ? 'text-sky-600' : 'text-red-600'}`}>
+                  {tx.type === 'Buy' ? '+' : tx.type === 'Transfer' ? '⇄' : '-'}${tx.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {tx.quantity} {tx.coinSymbol} @ ${tx.price.toLocaleString('en-US')}

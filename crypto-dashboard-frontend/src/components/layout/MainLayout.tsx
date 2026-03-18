@@ -4,11 +4,11 @@ import Header from './Header';
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
-  '/portfolio': 'Portfolio',
-  '/wallets': 'Wallets',
+  '/dashboard': 'Dashboard',
+  '/analytics': 'Analytics',
+  '/market': 'Market',
   '/transactions': 'Transactions',
-  '/market': 'Crypto Market',
-  '/settings': 'Settings',
+  '/profile': 'Profile Settings',
 };
 
 export default function MainLayout() {
