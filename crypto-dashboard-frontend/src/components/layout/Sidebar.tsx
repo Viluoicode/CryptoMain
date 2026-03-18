@@ -47,7 +47,7 @@ export default function Sidebar() {
           Menu
         </p>
         <ul className="space-y-1">
-          {navItems.slice(0, 5).map((item) => (
+          {navItems.slice(0, 4).map((item) => (
             <li key={item.id}>
               <NavLink
                 to={item.path}
