@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import {
-  LineChart, Line, ResponsiveContainer, Tooltip,
-} from 'recharts';
-import { marketCoins, watchlistItems } from '../data/mockData';
-import type { MarketCoin } from '../types';
+import { useCryptoMarket } from '../hooks/useCryptoMarket';
+import type { CryptoListResponse } from '../api/cryptoApi';
 
 function fmt(n: number, decimals = 2) {
   return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -28,56 +25,54 @@ function ChangePill({ value }: { value: number }) {
   );
 }
 
-function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
-  const points = data.map((v, i) => ({ i, v }));
+function CoinIcon({ coin }: { coin: CryptoListResponse }) {
+  const [imgError, setImgError] = useState(false);
+  if (coin.image && !imgError) {
+    return (
+      <img
+        src={coin.image}
+        alt={coin.symbol}
+        className="w-8 h-8 rounded-full shrink-0"
+        onError={() => setImgError(true)}
+      />
+    );
+  }
   return (
-    <ResponsiveContainer width={80} height={32}>
-      <LineChart data={points}>
-        <Line
-          type="monotone"
-          dataKey="v"
-          stroke={positive ? '#10B981' : '#EF4444'}
-          strokeWidth={1.5}
-          dot={false}
-        />
-        <Tooltip
-          formatter={(v) => {
-            const num = typeof v === 'number' ? v : 0;
-            return [`$${fmt(num)}`, ''] as [string, string];
-          }}
-          contentStyle={{ fontSize: 11, borderRadius: 8, padding: '4px 8px' }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-500 text-white font-bold text-xs shrink-0">
+      {coin.symbol.charAt(0).toUpperCase()}
+    </div>
   );
 }
 
-const COIN_RATES: Record<string, number> = {
-  BTC: 43_250,
-  ETH: 2_890.50,
-  SOL: 105.80,
-  ADA: 0.812,
-  BNB: 418.30,
-  USDT: 1.0,
-  XRP: 0.582,
-  AVAX: 38.90,
-};
-
 export default function MarketPage() {
+  const { coins, loading, error, watchlist, toggleWatchlist, refetch } = useCryptoMarket(10);
   const [search, setSearch] = useState('');
   const [fromAmount, setFromAmount] = useState('1');
-  const [fromCoin, setFromCoin] = useState('BTC');
-  const [toCoin, setToCoin] = useState('ETH');
+  const [fromCoin, setFromCoin] = useState('');
+  const [toCoin, setToCoin] = useState('');
 
-  const filtered = marketCoins.filter(
-    (c: MarketCoin) =>
+  // Build a symbol→price map from live data for the converter
+  const coinRates: Record<string, number> = {};
+  coins.forEach((c) => {
+    coinRates[c.symbol.toUpperCase()] = c.currentPrice;
+  });
+
+  // Default converter selections to first two coins once data loads
+  const symbols = Object.keys(coinRates);
+  const effectiveFrom = fromCoin && coinRates[fromCoin] !== undefined ? fromCoin : (symbols[0] ?? '');
+  const effectiveTo = toCoin && coinRates[toCoin] !== undefined ? toCoin : (symbols[1] ?? '');
+
+  const fromRate = coinRates[effectiveFrom] ?? 1;
+  const toRate = coinRates[effectiveTo] ?? 1;
+  const converted = (parseFloat(fromAmount) || 0) * (fromRate / toRate);
+
+  const filtered = coins.filter(
+    (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.symbol.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const fromRate = COIN_RATES[fromCoin] ?? 1;
-  const toRate = COIN_RATES[toCoin] ?? 1;
-  const converted = (parseFloat(fromAmount) || 0) * (fromRate / toRate);
+  const watchlistCoins = coins.filter((c) => watchlist.has(c.id));
 
   return (
     <div className="flex gap-6">
@@ -86,17 +81,33 @@ export default function MarketPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-800">Market Overview</h2>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
-            <input
-              type="text"
-              placeholder="Search coin..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 w-52"
-            />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => void refetch()}
+              className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+              title="Refresh"
+            >
+              🔄
+            </button>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+              <input
+                type="text"
+                placeholder="Search coin..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 w-52"
+              />
+            </div>
           </div>
         </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
@@ -106,58 +117,58 @@ export default function MarketPage() {
                   <th className="px-4 py-3 text-left font-semibold w-8">#</th>
                   <th className="px-4 py-3 text-left font-semibold">Name</th>
                   <th className="px-4 py-3 text-right font-semibold">Price</th>
-                  <th className="px-4 py-3 text-right font-semibold">1h %</th>
                   <th className="px-4 py-3 text-right font-semibold">24h %</th>
-                  <th className="px-4 py-3 text-right font-semibold">7d %</th>
                   <th className="px-4 py-3 text-right font-semibold hidden lg:table-cell">Market Cap</th>
                   <th className="px-4 py-3 text-right font-semibold hidden xl:table-cell">Volume (24h)</th>
-                  <th className="px-4 py-3 text-center font-semibold">Chart</th>
                   <th className="px-4 py-3 text-center font-semibold">★</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filtered.map((coin) => (
+                {loading && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center text-slate-400 text-sm">
+                      Loading market data…
+                    </td>
+                  </tr>
+                )}
+                {!loading && filtered.length === 0 && !error && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center text-slate-400 text-sm">
+                      No coins found.
+                    </td>
+                  </tr>
+                )}
+                {!loading && filtered.map((coin, index) => (
                   <tr key={coin.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-4 py-3 text-slate-400 text-xs">{coin.rank}</td>
+                    <td className="px-4 py-3 text-slate-400 text-xs">{index + 1}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
-                          style={{ backgroundColor: coin.iconColor }}
-                        >
-                          {coin.symbol.charAt(0)}
-                        </div>
+                        <CoinIcon coin={coin} />
                         <div>
                           <p className="font-semibold text-slate-800">{coin.name}</p>
-                          <p className="text-xs text-slate-400">{coin.symbol}</p>
+                          <p className="text-xs text-slate-400">{coin.symbol.toUpperCase()}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                      ${coin.price < 10 ? fmt(coin.price, 4) : fmt(coin.price)}
+                      ${coin.currentPrice < 10 ? fmt(coin.currentPrice, 4) : fmt(coin.currentPrice)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <ChangePill value={coin.change1h} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <ChangePill value={coin.change24h} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <ChangePill value={coin.change7d} />
+                      <ChangePill value={coin.priceChangePercentage24h} />
                     </td>
                     <td className="px-4 py-3 text-right text-slate-600 hidden lg:table-cell">
                       {fmtLarge(coin.marketCap)}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-600 hidden xl:table-cell">
-                      {fmtLarge(coin.volume24h)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-center">
-                        <Sparkline data={coin.sparkline} positive={coin.change7d >= 0} />
-                      </div>
+                      {fmtLarge(coin.totalVolume)}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={coin.inWatchlist ? 'text-amber-400' : 'text-slate-300'}>★</span>
+                      <button
+                        onClick={() => toggleWatchlist(coin.id)}
+                        className={`text-lg transition-colors ${watchlist.has(coin.id) ? 'text-amber-400' : 'text-slate-300 hover:text-amber-300'}`}
+                      >
+                        ★
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -169,87 +180,92 @@ export default function MarketPage() {
 
       {/* Right Sidebar */}
       <div className="w-72 shrink-0 space-y-4">
-        {/* USD Converter */}
+        {/* Converter */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
           <h3 className="text-sm font-semibold text-slate-800 mb-4">Converter</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-slate-500 mb-1 block">From</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={fromAmount}
-                  onChange={(e) => setFromAmount(e.target.value)}
-                  className="flex-1 min-w-0 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-                <select
-                  value={fromCoin}
-                  onChange={(e) => setFromCoin(e.target.value)}
-                  className="px-2 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-                >
-                  {Object.keys(COIN_RATES).map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="text-center text-slate-400 text-lg">⇅</div>
-            <div>
-              <label className="text-xs text-slate-500 mb-1 block">To</label>
-              <div className="flex gap-2">
-                <div className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 truncate">
-                  {isNaN(converted) ? '—' : converted.toLocaleString('en-US', { maximumFractionDigits: 6 })}
+          {loading ? (
+            <p className="text-xs text-slate-400 text-center py-4">Loading prices…</p>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">From</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={fromAmount}
+                    onChange={(e) => setFromAmount(e.target.value)}
+                    className="flex-1 min-w-0 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  <select
+                    value={effectiveFrom}
+                    onChange={(e) => setFromCoin(e.target.value)}
+                    className="px-2 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                  >
+                    {symbols.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </div>
-                <select
-                  value={toCoin}
-                  onChange={(e) => setToCoin(e.target.value)}
-                  className="px-2 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-                >
-                  {Object.keys(COIN_RATES).map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
               </div>
+              <div className="text-center text-slate-400 text-lg">⇅</div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">To</label>
+                <div className="flex gap-2">
+                  <div className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-700 truncate">
+                    {isNaN(converted) ? '—' : converted.toLocaleString('en-US', { maximumFractionDigits: 6 })}
+                  </div>
+                  <select
+                    value={effectiveTo}
+                    onChange={(e) => setToCoin(e.target.value)}
+                    className="px-2 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                  >
+                    {symbols.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 text-center">
+                1 {effectiveFrom} = {toRate > 0 ? (fromRate / toRate).toLocaleString('en-US', { maximumFractionDigits: 6 }) : '—'} {effectiveTo}
+              </p>
             </div>
-            <p className="text-xs text-slate-400 text-center">
-              1 {fromCoin} = {(fromRate / toRate).toLocaleString('en-US', { maximumFractionDigits: 6 })} {toCoin}
-            </p>
-          </div>
+          )}
         </div>
 
         {/* Watchlist */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
           <h3 className="text-sm font-semibold text-slate-800 mb-4">Watchlist</h3>
-          <div className="space-y-3">
-            {watchlistItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
-                    style={{ backgroundColor: item.iconColor }}
-                  >
-                    {item.symbol.charAt(0)}
+          {watchlistCoins.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-4">
+              Star a coin to add it to your watchlist.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {watchlistCoins.map((item) => (
+                <div key={item.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <CoinIcon coin={item} />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{item.symbol.toUpperCase()}</p>
+                      <p className="text-xs text-slate-400">{item.name}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{item.symbol}</p>
-                    <p className="text-xs text-slate-400">{item.name}</p>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-slate-800">
+                      ${item.currentPrice < 10 ? fmt(item.currentPrice, 4) : fmt(item.currentPrice)}
+                    </p>
+                    <span
+                      className={`text-xs font-semibold ${
+                        item.priceChangePercentage24h >= 0 ? 'text-emerald-600' : 'text-red-500'
+                      }`}
+                    >
+                      {item.priceChangePercentage24h >= 0 ? '▲' : '▼'} {Math.abs(item.priceChangePercentage24h).toFixed(2)}%
+                    </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-slate-800">
-                    ${item.price < 10 ? fmt(item.price, 4) : fmt(item.price)}
-                  </p>
-                  <span
-                    className={`text-xs font-semibold ${
-                      item.change24h >= 0 ? 'text-emerald-600' : 'text-red-500'
-                    }`}
-                  >
-                    {item.change24h >= 0 ? '▲' : '▼'} {Math.abs(item.change24h).toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
