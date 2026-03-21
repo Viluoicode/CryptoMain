@@ -148,7 +148,8 @@ function LoginModal() {
 
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
+  
   const { summary, performance, loading, error, refresh } = usePortfolio();
 
   const [activePeriod, setActivePeriod] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1M');
