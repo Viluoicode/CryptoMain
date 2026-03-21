@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -10,6 +10,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { ApiError } from '../api/apiClient';
+import { walletApi, type WalletResponse } from '../api/walletApi';
+import { transactionApi } from '../api/transactionApi';
 import type { CryptoHolding, AssetDistribution } from '../types';
 
 // ─── Coin colour palette ───────────────────────────────────────────────────────
@@ -153,8 +155,13 @@ export default function DashboardPage() {
 
   const [activePeriod, setActivePeriod] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1M');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
-  const [tradeAsset, setTradeAsset] = useState('BTC');
+  const [tradeAsset, setTradeAsset] = useState(''); // stores coinId
   const [tradeAmount, setTradeAmount] = useState('');
+  const [tradeWalletId, setTradeWalletId] = useState('');
+  const [wallets, setWallets] = useState<WalletResponse[]>([]);
+  const [tradeLoading, setTradeLoading] = useState(false);
+  const [tradeError, setTradeError] = useState<string | null>(null);
+  const [tradeSuccess, setTradeSuccess] = useState<string | null>(null);
 
   // ── Derive display values: prefer real API data, fall back to mock ──────────
   const mockTotalInvested = mockHoldings.reduce((sum, h) => sum + h.totalValue, 0);
@@ -197,6 +204,74 @@ export default function DashboardPage() {
 
   const chartData = portfolioHistory[activePeriod];
   const periods: Array<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'> = ['1D', '1W', '1M', '3M', '1Y', 'ALL'];
+
+  // ── Sync default selected asset to first holding's coinId ──────────────────
+  useEffect(() => {
+    if (displayHoldings.length > 0 && tradeAsset === '') {
+      setTradeAsset(displayHoldings[0].id);
+    }
+  }, [displayHoldings, tradeAsset]);
+
+  // ── Fetch user wallets for Quick Trade ────────────────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    walletApi.getAll()
+      .then((data) => {
+        setWallets(data);
+        // Use functional updater so tradeWalletId is not a dependency
+        setTradeWalletId((prev) => prev || (data[0]?.id ?? ''));
+      })
+      .catch(() => {
+        setTradeError('Could not load wallets. Please refresh the page.');
+      });
+  }, [isAuthenticated]);
+
+  // ── Quick Trade submit ─────────────────────────────────────────────────────
+  async function handleQuickTrade() {
+    setTradeError(null);
+    setTradeSuccess(null);
+
+    if (!tradeWalletId) {
+      setTradeError('No wallet found. Please create a wallet first.');
+      return;
+    }
+    const amount = Number(tradeAmount);
+    if (!tradeAmount || amount <= 0) {
+      setTradeError('Enter a valid USD amount greater than 0.');
+      return;
+    }
+    const holding = displayHoldings.find((h) => h.id === tradeAsset);
+    if (!holding || holding.currentPrice <= 0) {
+      setTradeError('Cannot determine coin price. Please try again.');
+      return;
+    }
+
+    const quantity = amount / holding.currentPrice;
+
+    setTradeLoading(true);
+    try {
+      await transactionApi.create({
+        walletId: tradeWalletId,
+        coinId: tradeAsset,
+        type: tradeType === 'buy' ? 1 : 2,
+        quantity,
+        pricePerCoin: holding.currentPrice,
+      });
+      setTradeAmount('');
+      setTradeSuccess(
+        `${tradeType === 'buy' ? 'Bought' : 'Sold'} ${holding.symbol} successfully!`,
+      );
+      refresh(); // refresh portfolio data
+    } catch (err) {
+      setTradeError(
+        err instanceof ApiError
+          ? `Trade failed (${err.status}): ${err.message}`
+          : 'Trade failed. Please try again.',
+      );
+    } finally {
+      setTradeLoading(false);
+    }
+  }
 
   return (
     <>
@@ -448,7 +523,23 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* Asset selector — populated from real API holdings or mock */}
+            {/* Wallet selector — shown only when user has multiple wallets */}
+            {wallets.length > 1 && (
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Wallet</label>
+                <select
+                  value={tradeWalletId}
+                  onChange={(e) => setTradeWalletId(e.target.value)}
+                  className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {wallets.map((w) => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Asset selector — value is coinId; populated from real API holdings or mock */}
             <div>
               <label className="block text-xs text-slate-400 mb-1.5">Asset</label>
               <select
@@ -457,7 +548,7 @@ export default function DashboardPage() {
                 className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {displayHoldings.map((h) => (
-                  <option key={h.id} value={h.symbol}>{h.symbol} - {h.name}</option>
+                  <option key={h.id} value={h.id}>{h.symbol} - {h.name}</option>
                 ))}
               </select>
             </div>
@@ -473,7 +564,30 @@ export default function DashboardPage() {
                 onChange={(e) => setTradeAmount(e.target.value)}
                 className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500"
               />
+              {/* Estimated quantity preview */}
+              {tradeAmount && Number(tradeAmount) > 0 && (() => {
+                const h = displayHoldings.find((x) => x.id === tradeAsset);
+                if (!h || h.currentPrice <= 0) return null;
+                const qty = (Number(tradeAmount) / h.currentPrice).toFixed(8);
+                return (
+                  <p className="mt-1 text-xs text-slate-500">
+                    ≈ {qty} {h.symbol}
+                  </p>
+                );
+              })()}
             </div>
+
+            {/* Trade feedback messages */}
+            {tradeError && (
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                {tradeError}
+              </p>
+            )}
+            {tradeSuccess && (
+              <p className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+                ✓ {tradeSuccess}
+              </p>
+            )}
 
             {/* Recent transactions preview */}
             <div>
@@ -509,11 +623,18 @@ export default function DashboardPage() {
 
             {/* CTA button */}
             <button
-              className={`mt-auto w-full py-3 rounded-xl text-sm font-semibold text-white transition-colors ${
-                tradeType === 'buy' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'
+              onClick={handleQuickTrade}
+              disabled={tradeLoading || !isAuthenticated}
+              className={`mt-auto w-full py-3 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                tradeType === 'buy'
+                  ? 'bg-emerald-600 hover:bg-emerald-500 disabled:hover:bg-emerald-600'
+                  : 'bg-red-600 hover:bg-red-500 disabled:hover:bg-red-600'
               }`}
             >
-              {tradeType === 'buy' ? 'Buy' : 'Sell'} {tradeAsset}
+              {tradeLoading
+                ? 'Processing…'
+                : `${tradeType === 'buy' ? 'Buy' : 'Sell'} ${displayHoldings.find((h) => h.id === tradeAsset)?.symbol ?? tradeAsset}`
+              }
             </button>
           </div>
         </div>
