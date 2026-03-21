@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
 import {
-  mockUser, mockHoldings, mockTransactions, portfolioHistory,
+  mockUser, mockHoldings,  portfolioHistory,
   assetDistribution, marketCoins,
 } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
@@ -28,47 +28,82 @@ function getCoinColor(coinId: string): string {
 }
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({
-  title, value, change, isPositive, accentColor = 'bg-indigo-500',
-}: {
-  title: string; value: string; change?: string; isPositive?: boolean; accentColor?: string;
-}) {
+interface StatCardProps {
+  title: string;
+  subtitle: string;
+  value: string;
+  change?: string;
+  isPositive?: boolean;
+  icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
+}
+function StatCard({ title, subtitle, value, change, isPositive, icon, iconBg, iconColor }: StatCardProps) {
   return (
-    <div className="relative bg-[#151924] rounded-2xl p-6 border border-slate-800 overflow-hidden hover:border-slate-700 transition-colors">
-      <div className={`absolute top-0 left-0 right-0 h-1 ${accentColor} rounded-t-2xl`} />
-      <p className="text-sm font-medium text-slate-400 mb-2">{title}</p>
-      <p className="text-2xl font-bold text-slate-100 tracking-tight">{value}</p>
-      {change && (
-        <span
-          className={`inline-flex items-center gap-1 mt-2 text-xs font-semibold px-2 py-1 rounded-full ${
-            isPositive
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              : 'bg-red-500/10 text-red-400 border border-red-500/20'
-          }`}
-        >
-          {isPositive ? '▲' : '▼'} {change}
-        </span>
-      )}
+    <div className="flex flex-col rounded-2xl border border-white/[0.05] bg-[#151924] p-6 shadow-sm">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-400">{title}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>
+        </div>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-opacity-20 ${iconBg} ${iconColor}`}>
+          {icon}
+        </div>
+      </div>
+      <div className="mt-4">
+        <p className="text-[28px] font-bold tracking-tight text-white">{value}</p>
+        {change && (
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs">
+            <span className={`flex items-center font-semibold ${isPositive ? 'text-[#00B087]' : 'text-[#FF4B4B]'}`}>
+              {change}
+            </span>
+            <span className="text-slate-500">vs last week</span>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-// ─── Custom Tooltip for Line Chart ────────────────────────────────────────────
-function PortfolioTooltip({ active, payload, label }: {
-  active?: boolean; payload?: { value: number }[]; label?: string;
-}) {
+// ─── Tooltips ─────────────────────────────────────────────────────────────────
+interface TooltipProps {
+  active?: boolean;
+  payload?: { value: number; name: string }[]; 
+  label?: string;
+}
+function PortfolioTooltip({ active, payload, label }: TooltipProps) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#1E2433] border border-slate-700 rounded-xl px-4 py-3 shadow-xl">
-        <p className="text-xs text-slate-400 mb-1">{label}</p>
-        <p className="text-base font-bold text-slate-100">
-          ${payload[0].value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-        </p>
+      <div className="rounded-xl border border-white/[0.1] bg-[#1A1B24] px-4 py-3 shadow-xl">
+        <p className="mb-1 text-xs text-slate-400">{label}</p>
+        <p className="text-base font-bold text-white">${payload[0].value.toLocaleString('en-US')}</p>
       </div>
     );
   }
   return null;
 }
+
+function AllocationTooltip({ active, payload }: TooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-xl border border-white/[0.1] bg-[#1A1B24] px-3 py-2 shadow-xl">
+        <p className="text-xs font-semibold text-white">{payload[0].name}: ${payload[0].value.toLocaleString('en-US')}</p>
+      </div>
+    );
+  }
+  return null;
+}
+
+function tokenClasses(symbol: string) {
+  if (symbol === 'BTC') return { dot: 'bg-amber-400', coin: 'bg-amber-500/20 text-amber-300' };
+  if (symbol === 'ETH') return { dot: 'bg-indigo-400', coin: 'bg-indigo-500/20 text-indigo-300' };
+  if (symbol === 'SOL') return { dot: 'bg-violet-400', coin: 'bg-violet-500/20 text-violet-300' };
+  if (symbol === 'ADA') return { dot: 'bg-blue-400', coin: 'bg-blue-500/20 text-blue-300' };
+  return { dot: 'bg-rose-400', coin: 'bg-rose-500/20 text-rose-300' };
+}
+
+type Period = '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL';
+const periods: Period[] = ['1D', '1W', '1M', '3M', '1Y', 'ALL'];
 
 // ─── Login Modal ──────────────────────────────────────────────────────────────
 function LoginModal() {
@@ -148,26 +183,28 @@ function LoginModal() {
 
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 export default function DashboardPage() {
-    const { isAuthenticated } = useAuth();
-  
+  const { isAuthenticated } = useAuth();
   const { summary, performance, loading, error, refresh } = usePortfolio();
 
-  const [activePeriod, setActivePeriod] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1M');
+  const [activePeriod, setActivePeriod] = useState<Period>('1M');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [tradeAsset, setTradeAsset] = useState('BTC');
   const [tradeAmount, setTradeAmount] = useState('');
 
-  // ── Derive display values: prefer real API data, fall back to mock ──────────
   const mockTotalInvested = mockHoldings.reduce((sum, h) => sum + h.totalValue, 0);
   const mockUnrealizedPnl = mockUser.totalBalance - mockTotalInvested;
 
-  const totalValue = summary?.totalCurrentValue ?? mockUser.totalBalance;
+  const userBalance = summary?.totalCurrentValue ?? mockUser.totalBalance;
+  const userProfit = summary?.totalProfitLoss ?? mockUser.balanceChange;
   const totalInvested = summary?.totalInvestedValue ?? mockTotalInvested;
   const unrealizedPnl = performance?.unrealizedProfitLoss ?? mockUnrealizedPnl;
   const unrealizedPnlPct = performance?.unrealizedProfitLossPercentage ??
     ((mockUnrealizedPnl / mockTotalInvested) * 100);
 
-  // Build asset distribution from API allocations, or fall back to mock
+  const profitChangeValue = summary
+    ? `${summary.totalProfitLossPercentage >= 0 ? '+' : ''}${summary.totalProfitLossPercentage.toFixed(2)}% all time`
+    : `+ $1,248 (+2.01%)`;
+
   const displayAssetDistribution: AssetDistribution[] =
     summary && summary.allocations.length > 0
       ? summary.allocations.map((a) => ({
@@ -179,7 +216,6 @@ export default function DashboardPage() {
         }))
       : assetDistribution;
 
-  // Build holdings list for Quick Trade from API, or fall back to mock
   const displayHoldings: CryptoHolding[] =
     summary && summary.allocations.length > 0
       ? summary.allocations.map((a) => ({
@@ -194,16 +230,14 @@ export default function DashboardPage() {
         }))
       : mockHoldings;
 
-  const assetsCount = summary ? summary.allocations.length : mockHoldings.length;
-
-  const chartData = portfolioHistory[activePeriod];
-  const periods: Array<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'> = ['1D', '1W', '1M', '3M', '1Y', 'ALL'];
+  const chartData = portfolioHistory[activePeriod] || portfolioHistory['1M'];
 
   return (
     <>
       {!isAuthenticated && <LoginModal />}
 
-      <div className="space-y-6">
+      <div className="flex flex-col gap-6 p-6 lg:p-8 bg-[#0B0E14] min-h-screen">
+        
         {/* ── API status banner ── */}
         {isAuthenticated && error && (
           <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl px-4 py-3 text-sm">
@@ -228,195 +262,140 @@ export default function DashboardPage() {
         )}
 
         {/* ── Row 1: Stat Cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            title="Total Portfolio Value"
-            value={`$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-            change={
-              summary
-                ? `${summary.totalProfitLossPercentage >= 0 ? '+' : ''}${summary.totalProfitLossPercentage.toFixed(2)}% all time`
-                : `$${mockUser.balanceChange.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${mockUser.balanceChangePercent}%)`
-            }
-            isPositive={summary ? summary.totalProfitLoss >= 0 : mockUser.balanceChange > 0}
-            accentColor="bg-indigo-500"
+            title="Total Portfolio Value" subtitle="All assets combined"
+            value={`$${userBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            change={profitChangeValue} isPositive={userProfit >= 0}
+            icon={<span className="text-xl font-bold">$</span>} iconBg="bg-[#6C5CE7]/10" iconColor="text-[#A29BFE]"
           />
           <StatCard
-            title="Total Invested"
+            title="24h Profit/Loss" subtitle="Today's performance"
+            value={`$${userProfit.toLocaleString('en-US', { minimumFractionDigits: 0 })}`} 
+            change={profitChangeValue} isPositive={userProfit >= 0}
+            icon={<span className="text-xl font-bold">📈</span>} iconBg="bg-[#00B087]/10" iconColor="text-[#00B087]"
+          />
+          <StatCard
+            title="Total Invested" subtitle="Capital deployed"
             value={`$${totalInvested.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-            accentColor="bg-violet-500"
+            change={`+ $2,100 (+4.6%)`} isPositive={true}
+            icon={<span className="text-xl font-bold">💼</span>} iconBg="bg-[#FF9900]/10" iconColor="text-[#FFB347]"
           />
           <StatCard
-            title="Unrealized P&L"
+            title="Unrealized Gains" subtitle="Open positions"
             value={`${unrealizedPnl >= 0 ? '+' : ''}$${unrealizedPnl.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-            change={`${Math.abs(unrealizedPnlPct).toFixed(2)}% all time`}
-            isPositive={unrealizedPnl >= 0}
-            accentColor={unrealizedPnl >= 0 ? 'bg-emerald-500' : 'bg-red-500'}
-          />
-          <StatCard
-            title="Assets Held"
-            value={`${assetsCount}`}
-            change="Active holdings"
-            isPositive={true}
-            accentColor="bg-sky-500"
+            change={`${Math.abs(unrealizedPnlPct).toFixed(2)}%`} isPositive={unrealizedPnl >= 0}
+            icon={<span className="text-xl font-bold">🎯</span>} iconBg="bg-[#6C5CE7]/10" iconColor="text-[#A29BFE]"
           />
         </div>
 
-        {/* ── Row 2: Portfolio Performance + Asset Allocation ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Portfolio Performance (col-span-2) */}
-          <div className="lg:col-span-2 bg-[#151924] rounded-2xl border border-slate-800 p-6">
-            <div className="flex items-center justify-between mb-5">
+        {/* ── Row 2: Charts ── */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Portfolio Chart */}
+          <div className="rounded-2xl border border-white/[0.05] bg-[#151924] p-6 lg:col-span-2 shadow-sm flex flex-col">
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-base font-semibold text-slate-100">Portfolio Performance</h2>
-                <p className="text-sm text-slate-400 mt-0.5">
-                  ${(chartData[chartData.length - 1]?.value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </p>
+                <h2 className="text-sm font-semibold text-slate-400">Portfolio Performance</h2>
+                <div className="mt-1 flex items-baseline gap-3">
+                  <p className="text-[32px] font-bold tracking-tight text-white">
+                    ${(chartData[chartData.length - 1]?.value ?? 0).toLocaleString('en-US')}
+                  </p>
+                  <span className={`text-sm font-semibold ${userProfit >= 0 ? 'text-[#00B087]' : 'text-[#FF4B4B]'}`}>
+                    {profitChangeValue}
+                  </span>
+                </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex items-center gap-1 rounded-xl bg-[#0D0E14] p-1">
                 {periods.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setActivePeriod(p)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
-                      activePeriod === p
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                    }`}
-                  >
-                    {p}
+                  <button key={p} onClick={() => setActivePeriod(p)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${activePeriod === p ? 'bg-[#6C5CE7] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>
+                    {p === 'ALL' ? 'All' : p}
                   </button>
                 ))}
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E2433" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: '#64748b', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  tick={{ fill: '#64748b', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                  width={45}
-                />
-                <Tooltip content={<PortfolioTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#6366f1"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 5, fill: '#6366f1', strokeWidth: 0 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="h-[280px] w-full mt-auto">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="date" tick={{ fill: '#4B5563', fontSize: 12 }} axisLine={false} tickLine={false} interval="preserveStartEnd" dy={10} />
+                  <YAxis tick={{ fill: '#4B5563', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={45} dx={-10} />
+                  <Tooltip content={<PortfolioTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                  <Line type="monotone" dataKey="value" stroke="#6C5CE7" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#6C5CE7', stroke: '#111218', strokeWidth: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          {/* Asset Allocation (col-span-1) */}
-          <div className="bg-[#151924] rounded-2xl border border-slate-800 p-6">
-            <h2 className="text-base font-semibold text-slate-100 mb-4">Asset Allocation</h2>
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={displayAssetDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={52}
-                  outerRadius={78}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {displayAssetDistribution.map((entry) => (
-                    <Cell key={entry.symbol} fill={entry.color} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: '#1E2433',
-                    border: '1px solid #334155',
-                    borderRadius: 12,
-                    color: '#e2e8f0',
-                  }}
-                  formatter={(value) => {
-                    const num = typeof value === 'number' ? value : Number(value);
-                    return [`$${num.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, ''];
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-3 space-y-2">
-              {displayAssetDistribution.map((asset) => (
-                <div key={asset.symbol} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: asset.color }} />
-                    <span className="text-sm text-slate-300">{asset.name}</span>
+          {/* Pie Chart */}
+          <div className="rounded-2xl border border-white/[0.05] bg-[#151924] p-6 shadow-sm flex flex-col">
+            <h2 className="text-base font-semibold text-white">Asset Allocation</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Portfolio distribution</p>
+            
+            <div className="mt-6 flex flex-col items-center gap-6 flex-1">
+              <div className="relative h-[200px] w-full shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={displayAssetDistribution} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={4} dataKey="value" stroke="none">
+                      {displayAssetDistribution.map((entry) => (<Cell key={entry.symbol} fill={entry.color} />))}
+                    </Pie>
+                    <Tooltip content={<AllocationTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="w-full space-y-3 mt-auto">
+                {displayAssetDistribution.map((asset) => (
+                  <div key={asset.symbol} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${tokenClasses(asset.symbol).dot}`} style={{ backgroundColor: asset.color }} />
+                      <span className="text-sm font-medium text-slate-300">{asset.symbol}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-white">{asset.percentage}%</span>
                   </div>
-                  <span className="text-sm font-medium text-slate-400">{asset.percentage}%</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
         {/* ── Row 3: Market Overview + Quick Trade ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Market Overview (col-span-2) */}
-          <div className="lg:col-span-2 bg-[#151924] rounded-2xl border border-slate-800 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-100">Market Overview</h2>
-              <a href="/market" className="text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-                View All →
-              </a>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Bảng giá */}
+          <div className="flex flex-col overflow-hidden rounded-2xl border border-white/[0.05] bg-[#151924] lg:col-span-2 shadow-sm">
+            <div className="flex items-start justify-between p-6 pb-4">
+              <div>
+                <h2 className="text-base font-semibold text-white">Market Overview</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Live crypto prices</p>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-slate-500 text-xs uppercase tracking-wide bg-slate-800/40 border-b border-slate-800">
-                    <th className="px-5 py-3 text-left font-semibold">Asset</th>
-                    <th className="px-5 py-3 text-right font-semibold">Price</th>
-                    <th className="px-5 py-3 text-right font-semibold">24h</th>
-                    <th className="px-5 py-3 text-right font-semibold hidden md:table-cell">Market Cap</th>
+                  <tr className="border-b border-white/[0.05] text-xs uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left font-medium">Asset</th>
+                    <th className="px-6 py-3 text-right font-medium">Price</th>
+                    <th className="px-6 py-3 text-right font-medium">24h</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {marketCoins.slice(0, 6).map((coin) => (
-                    <tr key={coin.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="px-5 py-3.5">
+                <tbody className="divide-y divide-white/[0.02]">
+                  {marketCoins.slice(0, 4).map((coin) => (
+                    <tr key={coin.id} className="transition-colors hover:bg-white/[0.02]">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
-                            style={{ backgroundColor: coin.iconColor }}
-                          >
-                            {coin.symbol.charAt(0)}
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${tokenClasses(coin.symbol).coin}`}>
+                            {coin.symbol.slice(0, 3)}
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-200">{coin.name}</p>
+                            <p className="font-semibold text-white">{coin.name}</p>
                             <p className="text-xs text-slate-500">{coin.symbol}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-right font-semibold text-slate-200">
-                        ${coin.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <span
-                          className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            coin.change24h >= 0
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                          }`}
-                        >
-                          {coin.change24h >= 0 ? '▲' : '▼'} {Math.abs(coin.change24h).toFixed(2)}%
+                      <td className="px-6 py-4 text-right font-semibold text-white">${coin.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`text-sm font-semibold ${coin.change24h >= 0 ? 'text-[#00B087]' : 'text-[#FF4B4B]'}`}>
+                          {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
                         </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right text-slate-400 hidden md:table-cell">
-                        ${(coin.marketCap / 1e9).toFixed(1)}B
                       </td>
                     </tr>
                   ))}
@@ -425,97 +404,31 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Quick Trade (col-span-1) */}
-          <div className="bg-[#151924] rounded-2xl border border-slate-800 p-6 flex flex-col gap-5">
-            <h2 className="text-base font-semibold text-slate-100">Quick Trade</h2>
-
-            {/* Buy / Sell toggle */}
-            <div className="grid grid-cols-2 gap-1 bg-slate-800/60 rounded-xl p-1">
-              <button
-                onClick={() => setTradeType('buy')}
-                className={`py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  tradeType === 'buy' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Buy
-              </button>
-              <button
-                onClick={() => setTradeType('sell')}
-                className={`py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  tradeType === 'sell' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Sell
-              </button>
+          {/* Đặt lệnh nhanh */}
+          <div className="flex flex-col rounded-2xl border border-white/[0.05] bg-[#151924] p-6 shadow-sm h-full">
+            <div className="mb-6">
+              <h2 className="text-base font-semibold text-white">Quick Trade</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Place instant orders</p>
             </div>
-
-            {/* Asset selector — populated from real API holdings or mock */}
-            <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Asset</label>
-              <select
-                value={tradeAsset}
-                onChange={(e) => setTradeAsset(e.target.value)}
-                className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {displayHoldings.map((h) => (
-                  <option key={h.id} value={h.symbol}>{h.symbol} - {h.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Amount input */}
-            <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Amount (USD)</label>
-              <input
-                type="number"
-                min="0"
-                placeholder="0.00"
-                value={tradeAmount}
-                onChange={(e) => setTradeAmount(e.target.value)}
-                className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500"
-              />
-            </div>
-
-            {/* Recent transactions preview */}
-            <div>
-              <p className="text-xs text-slate-500 uppercase tracking-widest mb-2">Recent</p>
-              <div className="space-y-2">
-                {mockTransactions.slice(0, 3).map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
-                          tx.type === 'Buy' ? 'bg-emerald-600' : tx.type === 'Transfer' ? 'bg-sky-600' : 'bg-red-600'
-                        }`}
-                      >
-                        {tx.type === 'Buy' ? '↑' : tx.type === 'Transfer' ? '⇄' : '↓'}
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-300">{tx.type} {tx.coinSymbol}</p>
-                        <p className="text-xs text-slate-500">{tx.date}</p>
-                      </div>
-                    </div>
-                    <p
-                      className={`text-xs font-semibold ${
-                        tx.type === 'Buy' ? 'text-emerald-400' : tx.type === 'Transfer' ? 'text-sky-400' : 'text-red-400'
-                      }`}
-                    >
-                      {tx.type === 'Buy' ? '+' : tx.type === 'Transfer' ? '⇄' : '-'}
-                      ${tx.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                ))}
+            <div className="flex flex-col gap-6 flex-1">
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-[#0D0E14] p-1">
+                <button onClick={() => setTradeType('buy')} className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${tradeType === 'buy' ? 'bg-[#00B087] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Buy</button>
+                <button onClick={() => setTradeType('sell')} className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${tradeType === 'sell' ? 'bg-[#FF4B4B] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Sell</button>
               </div>
+              <div>
+                <label className="mb-2 block text-xs font-medium text-slate-400">Asset</label>
+                <select value={tradeAsset} onChange={(e) => setTradeAsset(e.target.value)} className="w-full rounded-xl border border-white/[0.05] bg-[#0D0E14] px-4 py-3 text-sm font-medium text-white shadow-sm focus:border-[#6C5CE7] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]">
+                  {displayHoldings.map((h) => (<option key={h.id} value={h.symbol}>{h.symbol} - {h.name}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-medium text-slate-400">Amount (USD)</label>
+                <input type="number" min="0" placeholder="0.00" value={tradeAmount} onChange={(e) => setTradeAmount(e.target.value)} className="w-full rounded-xl border border-white/[0.05] bg-[#0D0E14] px-4 py-3 text-sm font-medium text-white shadow-sm placeholder-slate-600 focus:border-[#6C5CE7] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]" />
+              </div>
+              <button className={`mt-auto w-full rounded-xl py-3.5 text-sm font-bold text-white transition-colors shadow-sm ${tradeType === 'buy' ? 'bg-[#00B087] hover:bg-[#009D78]' : 'bg-[#FF4B4B] hover:bg-[#FF3333]'}`}>
+                {tradeType === 'buy' ? 'Buy' : 'Sell'} {tradeAsset}
+              </button>
             </div>
-
-            {/* CTA button */}
-            <button
-              className={`mt-auto w-full py-3 rounded-xl text-sm font-semibold text-white transition-colors ${
-                tradeType === 'buy' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'
-              }`}
-            >
-              {tradeType === 'buy' ? 'Buy' : 'Sell'} {tradeAsset}
-            </button>
           </div>
         </div>
       </div>

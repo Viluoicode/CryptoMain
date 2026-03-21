@@ -16,12 +16,14 @@ export default function MainLayout() {
   const pageTitle = pageTitles[location.pathname] ?? 'Dashboard';
 
   return (
-    <div className="grid grid-cols-[260px_1fr] h-screen bg-[#0B0E14] overflow-hidden">
+    <div className="grid h-screen grid-cols-[240px_minmax(0,1fr)] overflow-hidden bg-[#060912] text-slate-100">
       <Sidebar />
-      <div className="flex flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-col overflow-hidden bg-[#090D16] px-5 pt-5 pb-6 md:px-6 md:pt-6">
         <Header pageTitle={pageTitle} />
-        <main className="flex-1 overflow-y-auto p-8">
-          <Outlet />
+        <main className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="rounded-xl border border-slate-800/70 bg-[#0A0F1A] p-5 md:p-6">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

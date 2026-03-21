@@ -22,6 +22,75 @@ namespace CryptoDashboard.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CryptoDashboard.Domain.Entities.PortfolioSnapshot", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("ProfitLoss")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("SnapshotDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("TotalInvested")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "SnapshotDate")
+                        .IsUnique();
+
+                    b.ToTable("PortfolioSnapshots");
+                });
+
+            modelBuilder.Entity("CryptoDashboard.Domain.Entities.PriceHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("CoinId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("MarketCap")
+                        .HasPrecision(28, 2)
+                        .HasColumnType("decimal(28,2)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Volume24h")
+                        .HasPrecision(28, 2)
+                        .HasColumnType("decimal(28,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoinId", "RecordedAt");
+
+                    b.ToTable("PriceHistories");
+                });
+
             modelBuilder.Entity("CryptoDashboard.Domain.Entities.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -121,15 +190,8 @@ namespace CryptoDashboard.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("Balance")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("CurrencySymbol")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -149,6 +211,17 @@ namespace CryptoDashboard.Infrastructure.Migrations
                     b.ToTable("Wallets");
                 });
 
+            modelBuilder.Entity("CryptoDashboard.Domain.Entities.PortfolioSnapshot", b =>
+                {
+                    b.HasOne("CryptoDashboard.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CryptoDashboard.Domain.Entities.Transaction", b =>
                 {
                     b.HasOne("CryptoDashboard.Domain.Entities.Wallet", "Wallet")
@@ -162,13 +235,13 @@ namespace CryptoDashboard.Infrastructure.Migrations
 
             modelBuilder.Entity("CryptoDashboard.Domain.Entities.Wallet", b =>
                 {
-                    b.HasOne("CryptoDashboard.Domain.Entities.User", "Users")
+                    b.HasOne("CryptoDashboard.Domain.Entities.User", "User")
                         .WithMany("Wallets")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Users");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CryptoDashboard.Domain.Entities.User", b =>

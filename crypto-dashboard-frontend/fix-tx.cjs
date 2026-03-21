@@ -1,4 +1,6 @@
-import { useState } from 'react';
+const fs = require('fs');
+
+const content = `import { useState } from 'react';
 import { useTransactions } from '../hooks/useTransactions';
 import type { TransactionResponse } from '../api/transactionApi';
 
@@ -23,7 +25,7 @@ function TypeBadge({ type }: { type: TransactionResponse['type'] }) {
   const cls = label === 'Buy' ? 'bg-emerald-500' : 'bg-red-500';
   const icon = label === 'Buy' ? '↑' : '↓';
   return (
-    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${cls}`}>
+    <div className={\`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 \${cls}\`}>
       {icon}
     </div>
   );
@@ -193,10 +195,10 @@ export default function TransactionsPage() {
                         {tx.quantity} {tx.coinSymbol}
                       </td>
                       <td className="px-5 py-4 text-right text-slate-300">
-                        ${tx.pricePerCoin.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        \${tx.pricePerCoin.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-5 py-4 text-right font-bold text-white">
-                        ${tx.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        \${tx.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-5 py-4 text-slate-400">{formatDate(tx.transactionDate)}</td>
                       <td className="px-5 py-4 text-slate-500 text-xs">{tx.walletName}</td>
@@ -222,20 +224,20 @@ export default function TransactionsPage() {
           <div>
             <p className="text-xs text-slate-400 mb-1">Total Bought</p>
             <p className="text-xl font-bold text-emerald-500">
-              ${totalBought.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              \${totalBought.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
           <div>
             <p className="text-xs text-slate-400 mb-1">Total Sold</p>
             <p className="text-xl font-bold text-red-500">
-              ${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              \${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
           <div className="h-px bg-slate-800" />
           <div>
             <p className="text-xs text-slate-400 mb-1">Net Position</p>
-            <p className={`text-xl font-bold ${totalBought - totalSold >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              ${(totalBought - totalSold).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            <p className={\`text-xl font-bold \${totalBought - totalSold >= 0 ? 'text-emerald-500' : 'text-red-500'}\`}>
+              \${(totalBought - totalSold).toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
         </div>
@@ -251,7 +253,7 @@ export default function TransactionsPage() {
             return (
               <div key={label} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full ${color}`} />
+                  <span className={\`w-3 h-3 rounded-full \${color}\`} />
                   <span className="text-sm font-medium text-slate-300">{label}</span>
                 </div>
                 <span className="text-sm font-semibold text-white">{count}</span>
@@ -263,3 +265,7 @@ export default function TransactionsPage() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync('d:/DNTU/Tự Học/Crypto/crypto-dashboard-frontend/src/pages/TransactionsPage.tsx', content, 'utf8');
+console.log('Fixed Transactions Page merge conflict!');

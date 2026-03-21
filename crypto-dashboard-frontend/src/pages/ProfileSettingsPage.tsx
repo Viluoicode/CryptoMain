@@ -65,7 +65,7 @@ export default function ProfileSettingsPage() {
       <h2 className="text-lg font-semibold text-slate-800">Profile Settings</h2>
 
       {/* Profile Photo + Personal Details */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
         <h3 className="text-sm font-semibold text-slate-700 mb-5">Personal Details</h3>
         <form onSubmit={handleSave}>
           {/* Avatar */}
@@ -168,7 +168,7 @@ export default function ProfileSettingsPage() {
       </div>
 
       {/* Notification Settings */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
         <h3 className="text-sm font-semibold text-slate-700 mb-5">Notification Settings</h3>
         <div className="space-y-4">
           {notificationLabels.map(({ key, label, desc }) => (
@@ -187,7 +187,7 @@ export default function ProfileSettingsPage() {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-red-100 p-6">
         <h3 className="text-sm font-semibold text-red-600 mb-1">Danger Zone</h3>
         <p className="text-xs text-slate-400 mb-4">These actions are irreversible. Please proceed with caution.</p>
         <div className="flex flex-wrap gap-3">

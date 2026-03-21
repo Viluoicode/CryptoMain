@@ -5,43 +5,49 @@ interface HeaderProps {
 }
 
 export default function Header({ pageTitle }: HeaderProps) {
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between px-8 py-4 bg-[#0B0E14] border-b border-slate-800 shrink-0">
-      {/* Page Title */}
+    <header className="mb-5 flex min-h-[72px] flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-[#0A0B0F] px-4 py-4 sm:px-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-100">{pageTitle}</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
-          Welcome back, {mockUser.name.split(' ')[0]}! Here's your portfolio overview.
-        </p>
+        <h1 className="text-xl font-bold leading-tight text-white">{pageTitle}</h1>
+        <p className="mt-0.5 text-[13px] text-slate-500">{currentDate}</p>
       </div>
 
-      {/* Right Side: Search + Notifications + User */}
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative hidden sm:block">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+      <div className="ml-auto flex items-center gap-2.5 sm:gap-3">
+        <div className="hidden w-[190px] items-center gap-2 rounded-xl border border-white/10 bg-[#13141A] px-3.5 py-2 sm:flex md:w-[220px]">
+          <span className="shrink-0 text-[13px] text-slate-500">⌕</span>
           <input
             type="text"
-            placeholder="Search coins..."
-            className="pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-700 bg-slate-800/60 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-52"
+            placeholder="Search assets..."
+            className="w-full bg-transparent text-[13px] text-slate-400 outline-none placeholder:text-slate-500"
             readOnly
           />
         </div>
 
-        {/* Notification Bell */}
-        <button className="relative p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors">
-          <span className="text-lg">🔔</span>
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500" />
+        <button className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-white/10 bg-[#13141A] text-slate-400 transition-colors duration-200 hover:border-white/20 hover:text-slate-200">
+          <span className="text-sm">☾</span>
         </button>
 
-        {/* User Avatar */}
-        <div className="flex items-center gap-2 cursor-pointer">
-          <div className="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold text-sm">
+        <button className="relative flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-white/10 bg-[#13141A] text-slate-400 transition-colors duration-200 hover:border-white/20 hover:text-slate-200">
+          <span className="text-sm">⌁</span>
+          <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-[#6C5CE7]" />
+        </button>
+
+        <div className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-[#13141A] px-2 py-1.5 transition-colors duration-200 hover:border-white/20">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-xs font-semibold text-white">
             {mockUser.avatarInitials}
           </div>
-          <span className="text-sm font-medium text-slate-200 hidden md:block">
-            {mockUser.name.split(' ')[0]}
-          </span>
+          <div className="hidden text-left sm:block">
+            <p className="text-xs font-semibold leading-tight text-white">{mockUser.name}</p>
+            <p className="text-[10px] text-slate-500">Pro Trader</p>
+          </div>
+          <span className="text-sm text-slate-500">⌄</span>
         </div>
       </div>
     </header>

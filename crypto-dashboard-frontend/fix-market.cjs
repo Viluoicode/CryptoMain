@@ -1,4 +1,6 @@
-import { useState } from 'react';
+const fs = require('fs');
+
+const content = `import { useState } from 'react';
 import { useCryptoMarket } from '../hooks/useCryptoMarket';
 import type { CryptoListResponse } from '../api/cryptoApi';
 
@@ -7,18 +9,18 @@ function fmt(n: number, decimals = 2) {
 }
 
 function fmtLarge(n: number) {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  return `$${n.toLocaleString('en-US')}`;
+  if (n >= 1_000_000_000) return \`$\${(n / 1_000_000_000).toFixed(2)}B\`;
+  if (n >= 1_000_000) return \`$\${(n / 1_000_000).toFixed(2)}M\`;
+  return \`$\${n.toLocaleString('en-US')}\`;
 }
 
 function ChangePill({ value }: { value: number }) {
   const pos = value >= 0;
   return (
     <span
-      className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
+      className={\`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full \${
         pos ? 'text-emerald-500' : 'text-red-500'
-      }`}
+      }\`}
     >
       {pos ? '▲' : '▼'} {Math.abs(value).toFixed(2)}%
     </span>
@@ -159,7 +161,7 @@ export default function MarketPage() {
                     </div>
                   </td>
                   <td className="px-4 py-4 text-right font-medium text-white">
-                    ${coin.currentPrice < 10 ? fmt(coin.currentPrice, 4) : fmt(coin.currentPrice)}
+                    \${coin.currentPrice < 10 ? fmt(coin.currentPrice, 4) : fmt(coin.currentPrice)}
                   </td>
                   <td className="px-4 py-4 text-right">
                     <ChangePill value={coin.priceChangePercentage24h} />
@@ -173,9 +175,9 @@ export default function MarketPage() {
                   <td className="px-4 py-4 text-center">
                     <button
                       onClick={() => toggleWatchlist(coin.id)}
-                      className={`text-lg transition-colors ${
+                      className={\`text-lg transition-colors \${
                         watchlist.has(coin.id) ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'
-                      }`}
+                      }\`}
                     >
                       ★
                     </button>
@@ -266,12 +268,12 @@ export default function MarketPage() {
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-medium text-white">
-                          ${item.currentPrice < 10 ? fmt(item.currentPrice, 4) : fmt(item.currentPrice)}
+                          \${item.currentPrice < 10 ? fmt(item.currentPrice, 4) : fmt(item.currentPrice)}
                       </div>
                       <div
-                          className={`text-xs font-semibold ${
+                          className={\`text-xs font-semibold \${
                           item.priceChangePercentage24h >= 0 ? 'text-emerald-500' : 'text-red-500'
-                          }`}
+                          }\`}
                       >
                           {item.priceChangePercentage24h >= 0 ? '▲' : '▼'} {Math.abs(item.priceChangePercentage24h).toFixed(2)}%
                       </div>
@@ -285,3 +287,6 @@ export default function MarketPage() {
     </div>
   );
 }
+`;
+fs.writeFileSync('d:/DNTU/Tự Học/Crypto/crypto-dashboard-frontend/src/pages/MarketPage.tsx', content, 'utf8');
+console.log('Fixed MarketPage merge conflict!');
