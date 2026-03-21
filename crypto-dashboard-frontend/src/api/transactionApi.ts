@@ -19,6 +19,19 @@ export interface TransactionResponse {
   notes: string | null;
 }
 
+// Matches CreateTransactionRequest for POST /api/Transaction
+export interface CreateTransactionRequest {
+  walletId: string;
+  coinId: string;
+  type: TransactionType; // 1 = Buy, 2 = Sell
+  quantity: number;
+  pricePerCoin: number;
+  notes?: string;
+  transactionDate?: string;
+}
+
 export const transactionApi = {
   getAll: () => apiClient.get<TransactionResponse[]>('/api/Transaction'),
+  create: (data: CreateTransactionRequest) =>
+    apiClient.post<TransactionResponse>('/api/Transaction', data),
 };
