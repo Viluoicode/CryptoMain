@@ -1,15 +1,17 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
 import {
   mockUser, mockHoldings,  portfolioHistory,
-  assetDistribution, marketCoins,
+  assetDistribution, marketCoins, mockTransactions,
 } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { ApiError } from '../api/apiClient';
+import { walletApi, type WalletResponse } from '../api/walletApi';
+import { transactionApi } from '../api/transactionApi';
 import type { CryptoHolding, AssetDistribution } from '../types';
 
 // ─── Coin colour palette ───────────────────────────────────────────────────────
@@ -188,8 +190,13 @@ export default function DashboardPage() {
 
   const [activePeriod, setActivePeriod] = useState<Period>('1M');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
-  const [tradeAsset, setTradeAsset] = useState('BTC');
+  const [tradeAsset, setTradeAsset] = useState(''); // stores coinId
   const [tradeAmount, setTradeAmount] = useState('');
+  const [tradeWalletId, setTradeWalletId] = useState('');
+  const [wallets, setWallets] = useState<WalletResponse[]>([]);
+  const [tradeLoading, setTradeLoading] = useState(false);
+  const [tradeError, setTradeError] = useState<string | null>(null);
+  const [tradeSuccess, setTradeSuccess] = useState<string | null>(null);
 
   const mockTotalInvested = mockHoldings.reduce((sum, h) => sum + h.totalValue, 0);
   const mockUnrealizedPnl = mockUser.totalBalance - mockTotalInvested;
@@ -231,6 +238,74 @@ export default function DashboardPage() {
       : mockHoldings;
 
   const chartData = portfolioHistory[activePeriod] || portfolioHistory['1M'];
+
+  // ── Sync default selected asset to first holding's coinId ──────────────────
+  useEffect(() => {
+    if (displayHoldings.length > 0 && tradeAsset === '') {
+      setTradeAsset(displayHoldings[0].id);
+    }
+  }, [displayHoldings, tradeAsset]);
+
+  // ── Fetch user wallets for Quick Trade ────────────────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    walletApi.getAll()
+      .then((data) => {
+        setWallets(data);
+        // Use functional updater so tradeWalletId is not a dependency
+        setTradeWalletId((prev) => prev || (data[0]?.id ?? ''));
+      })
+      .catch(() => {
+        setTradeError('Could not load wallets. Please refresh the page.');
+      });
+  }, [isAuthenticated]);
+
+  // ── Quick Trade submit ─────────────────────────────────────────────────────
+  async function handleQuickTrade() {
+    setTradeError(null);
+    setTradeSuccess(null);
+
+    if (!tradeWalletId) {
+      setTradeError('No wallet found. Please create a wallet first.');
+      return;
+    }
+    const amount = Number(tradeAmount);
+    if (!tradeAmount || amount <= 0) {
+      setTradeError('Enter a valid USD amount greater than 0.');
+      return;
+    }
+    const holding = displayHoldings.find((h) => h.id === tradeAsset);
+    if (!holding || holding.currentPrice <= 0) {
+      setTradeError('Cannot determine coin price. Please try again.');
+      return;
+    }
+
+    const quantity = amount / holding.currentPrice;
+
+    setTradeLoading(true);
+    try {
+      await transactionApi.create({
+        walletId: tradeWalletId,
+        coinId: tradeAsset,
+        type: tradeType === 'buy' ? 1 : 2,
+        quantity,
+        pricePerCoin: holding.currentPrice,
+      });
+      setTradeAmount('');
+      setTradeSuccess(
+        `${tradeType === 'buy' ? 'Bought' : 'Sold'} ${holding.symbol} successfully!`,
+      );
+      refresh(); // refresh portfolio data
+    } catch (err) {
+      setTradeError(
+        err instanceof ApiError
+          ? `Trade failed (${err.status}): ${err.message}`
+          : 'Trade failed. Please try again.',
+      );
+    } finally {
+      setTradeLoading(false);
+    }
+  }
 
   return (
     <>
@@ -415,18 +490,119 @@ export default function DashboardPage() {
                 <button onClick={() => setTradeType('buy')} className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${tradeType === 'buy' ? 'bg-[#00B087] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Buy</button>
                 <button onClick={() => setTradeType('sell')} className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${tradeType === 'sell' ? 'bg-[#FF4B4B] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>Sell</button>
               </div>
+
+              {/* Wallet selector — shown only when user has multiple wallets */}
+              {wallets.length > 1 && (
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-slate-400">Wallet</label>
+                  <select
+                    value={tradeWalletId}
+                    onChange={(e) => setTradeWalletId(e.target.value)}
+                    className="w-full rounded-xl border border-white/[0.05] bg-[#0D0E14] px-4 py-3 text-sm font-medium text-white shadow-sm focus:border-[#6C5CE7] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]"
+                  >
+                    {wallets.map((w) => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Asset selector — value is coinId; populated from real API holdings or mock */}
               <div>
                 <label className="mb-2 block text-xs font-medium text-slate-400">Asset</label>
-                <select value={tradeAsset} onChange={(e) => setTradeAsset(e.target.value)} className="w-full rounded-xl border border-white/[0.05] bg-[#0D0E14] px-4 py-3 text-sm font-medium text-white shadow-sm focus:border-[#6C5CE7] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]">
-                  {displayHoldings.map((h) => (<option key={h.id} value={h.symbol}>{h.symbol} - {h.name}</option>))}
+                <select
+                  value={tradeAsset}
+                  onChange={(e) => setTradeAsset(e.target.value)}
+                  className="w-full rounded-xl border border-white/[0.05] bg-[#0D0E14] px-4 py-3 text-sm font-medium text-white shadow-sm focus:border-[#6C5CE7] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]"
+                >
+                  {displayHoldings.map((h) => (
+                    <option key={h.id} value={h.id}>{h.symbol} - {h.name}</option>
+                  ))}
                 </select>
               </div>
+
+              {/* Amount input */}
               <div>
                 <label className="mb-2 block text-xs font-medium text-slate-400">Amount (USD)</label>
-                <input type="number" min="0" placeholder="0.00" value={tradeAmount} onChange={(e) => setTradeAmount(e.target.value)} className="w-full rounded-xl border border-white/[0.05] bg-[#0D0E14] px-4 py-3 text-sm font-medium text-white shadow-sm placeholder-slate-600 focus:border-[#6C5CE7] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]" />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0.00"
+                  value={tradeAmount}
+                  onChange={(e) => setTradeAmount(e.target.value)}
+                  className="w-full rounded-xl border border-white/[0.05] bg-[#0D0E14] px-4 py-3 text-sm font-medium text-white shadow-sm placeholder-slate-600 focus:border-[#6C5CE7] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]"
+                />
+                {/* Estimated quantity preview */}
+                {tradeAmount && Number(tradeAmount) > 0 && (() => {
+                  const h = displayHoldings.find((x) => x.id === tradeAsset);
+                  if (!h || h.currentPrice <= 0) return null;
+                  const qty = (Number(tradeAmount) / h.currentPrice).toFixed(8);
+                  return (
+                    <p className="mt-1 text-xs text-slate-500">
+                      ≈ {qty} {h.symbol}
+                    </p>
+                  );
+                })()}
               </div>
-              <button className={`mt-auto w-full rounded-xl py-3.5 text-sm font-bold text-white transition-colors shadow-sm ${tradeType === 'buy' ? 'bg-[#00B087] hover:bg-[#009D78]' : 'bg-[#FF4B4B] hover:bg-[#FF3333]'}`}>
-                {tradeType === 'buy' ? 'Buy' : 'Sell'} {tradeAsset}
+
+              {/* Trade feedback messages */}
+              {tradeError && (
+                <p className="text-xs text-[#FF4B4B] bg-[#FF4B4B]/10 border border-[#FF4B4B]/20 rounded-lg px-3 py-2">
+                  {tradeError}
+                </p>
+              )}
+              {tradeSuccess && (
+                <p className="text-xs text-[#00B087] bg-[#00B087]/10 border border-[#00B087]/20 rounded-lg px-3 py-2">
+                  ✓ {tradeSuccess}
+                </p>
+              )}
+
+              {/* Recent transactions preview */}
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-widest mb-2">Recent</p>
+                <div className="space-y-2">
+                  {mockTransactions.slice(0, 3).map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
+                            tx.type === 'Buy' ? 'bg-[#00B087]' : tx.type === 'Transfer' ? 'bg-[#6C5CE7]' : 'bg-[#FF4B4B]'
+                          }`}
+                        >
+                          {tx.type === 'Buy' ? '↑' : tx.type === 'Transfer' ? '⇄' : '↓'}
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-300">{tx.type} {tx.coinSymbol}</p>
+                          <p className="text-xs text-slate-500">{tx.date}</p>
+                        </div>
+                      </div>
+                      <p
+                        className={`text-xs font-semibold ${
+                          tx.type === 'Buy' ? 'text-[#00B087]' : tx.type === 'Transfer' ? 'text-[#6C5CE7]' : 'text-[#FF4B4B]'
+                        }`}
+                      >
+                        {tx.type === 'Buy' ? '+' : tx.type === 'Transfer' ? '⇄' : '-'}
+                        ${tx.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA button */}
+              <button
+                onClick={handleQuickTrade}
+                disabled={tradeLoading || !isAuthenticated}
+                className={`mt-auto w-full rounded-xl py-3.5 text-sm font-bold text-white transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                  tradeType === 'buy'
+                    ? 'bg-[#00B087] hover:bg-[#009D78]'
+                    : 'bg-[#FF4B4B] hover:bg-[#FF3333]'
+                }`}
+              >
+                {tradeLoading
+                  ? 'Processing…'
+                  : `${tradeType === 'buy' ? 'Buy' : 'Sell'} ${displayHoldings.find((h) => h.id === tradeAsset)?.symbol ?? tradeAsset}`
+                }
               </button>
             </div>
           </div>
