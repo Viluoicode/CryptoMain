@@ -73,7 +73,7 @@ function PortfolioTooltip({ active, payload, label }: {
 }
 
 // ─── Login Modal ──────────────────────────────────────────────────────────────
-function LoginModal() {
+function LoginModal({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -143,6 +143,175 @@ function LoginModal() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <p className="mt-5 text-center text-xs text-slate-400">
+          Don&apos;t have an account?{' '}
+          <button
+            type="button"
+            onClick={onSwitchToRegister}
+            className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+          >
+            Sign up
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Register Modal ───────────────────────────────────────────────────────────
+function RegisterModal({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
+  const { register } = useAuth();
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  // Matches backend RegisterRequest validation: Username 3-100 chars, Password min 6 chars
+  const USERNAME_MIN = 3;
+  const USERNAME_MAX = 100;
+  const PASSWORD_MIN = 6;
+
+  useEffect(() => {
+    if (!success) return;
+    const timerId = setTimeout(() => { onSwitchToLogin(); }, 2000);
+    return () => { clearTimeout(timerId); };
+  }, [success, onSwitchToLogin]);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < PASSWORD_MIN) {
+      setError(`Password must be at least ${PASSWORD_MIN} characters.`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register({ username, email, password });
+      setSuccess(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        setError('Registration failed. Email or username may already be taken.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-[#151924] border border-slate-700 rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+        <div className="mb-6 text-center">
+          <h2 className="text-xl font-bold text-slate-100">Create an account</h2>
+          <p className="text-sm text-slate-400 mt-1">Start managing your crypto portfolio</p>
+        </div>
+
+        {success ? (
+          <div className="text-center py-4">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-emerald-400">Account created successfully!</p>
+            <p className="text-xs text-slate-400 mt-1">Redirecting to sign in…</p>
+          </div>
+        ) : (
+          <>
+            <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Username</label>
+                <input
+                  type="text"
+                  required
+                  minLength={USERNAME_MIN}
+                  maxLength={USERNAME_MAX}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="your_username"
+                  className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-800/60 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500"
+                />
+              </div>
+
+              {error && (
+                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Creating account…
+                  </span>
+                ) : 'Create account'}
+              </button>
+            </form>
+
+            <p className="mt-5 text-center text-xs text-slate-400">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+                className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+              >
+                Sign in
+              </button>
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -153,6 +322,7 @@ export default function DashboardPage() {
   const { isAuthenticated } = useAuth();
   const { summary, performance, loading, error, refresh } = usePortfolio();
 
+  const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [activePeriod, setActivePeriod] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'>('1M');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [tradeAsset, setTradeAsset] = useState(''); // stores coinId
@@ -275,7 +445,12 @@ export default function DashboardPage() {
 
   return (
     <>
-      {!isAuthenticated && <LoginModal />}
+      {!isAuthenticated && authView === 'login' && (
+        <LoginModal onSwitchToRegister={() => setAuthView('register')} />
+      )}
+      {!isAuthenticated && authView === 'register' && (
+        <RegisterModal onSwitchToLogin={() => setAuthView('login')} />
+      )}
 
       <div className="space-y-6">
         {/* ── API status banner ── */}
