@@ -9,6 +9,12 @@ export interface WalletResponse {
   updatedAt: string;
 }
 
+export interface CreateWalletRequest {
+  name: string;
+}
+
 export const walletApi = {
   getAll: () => apiClient.get<WalletResponse[]>('/api/Wallet'),
+  createWallet: (payload: CreateWalletRequest) =>
+    apiClient.post<WalletResponse>('/api/Wallet', payload),
 };

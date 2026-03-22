@@ -386,10 +386,20 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
     walletApi.getAll()
-      .then((data) => {
-        setWallets(data);
-        // Use functional updater so tradeWalletId is not a dependency
-        setTradeWalletId((prev) => prev || (data[0]?.id ?? ''));
+      .then(async (data) => {
+        if (data.length === 0) {
+          try {
+            const newWallet = await walletApi.createWallet({ name: 'Main Wallet' });
+            setWallets([newWallet]);
+            setTradeWalletId(newWallet.id);
+          } catch {
+            setTradeError('Could not create a default wallet. Please refresh the page.');
+          }
+        } else {
+          setWallets(data);
+          // Use functional updater so tradeWalletId is not a dependency
+          setTradeWalletId((prev) => prev || (data[0]?.id ?? ''));
+        }
       })
       .catch(() => {
         setTradeError('Could not load wallets. Please refresh the page.');
