@@ -82,11 +82,24 @@ namespace CryptoDashboard.Infrastructure.Services
 
         public async Task<CryptoListResponse?> GetCryptocurrencyByIdAsync(string coinId)
         {
-            // Check price cache first — if hit, we can still need full data
-            // But for single coin, go directly to the batch method
-            var results = await GetCryptocurrenciesByIdsAsync(new[] { coinId });
-            results.TryGetValue(coinId, out var coinData);
-            return coinData;
+            // Thử lấy từ TopCryptos cache trước — đã có full data
+            if (_cache.TryGetValue(TopCryptosCacheKey, out List<CryptoListResponse>? topList) && topList != null)
+            {
+                var cached = topList.FirstOrDefault(c => c.Id == coinId);
+                if (cached != null) return cached;
+            }
+
+            // Không có trong cache → fetch trực tiếp từ API với full data
+            var ids = Uri.EscapeDataString(coinId);
+            var url = $"{_options.BaseUrl}/coins/markets?vs_currency=usd&ids={ids}";
+
+            var response = await SendRateLimitedRequestAsync(url);
+            var json = await response.Content.ReadAsStringAsync();
+            var coinGeckoData = JsonSerializer.Deserialize<List<CoinGeckoResponse>>(json);
+
+            return coinGeckoData?.FirstOrDefault(c => c.CurrentPrice.HasValue) is { } coin
+                ? MapToResponse(coin)
+                : null;
         }
 
         public async Task<Dictionary<string, CryptoListResponse>> GetCryptocurrenciesByIdsAsync(IEnumerable<string> coinIds)
@@ -159,6 +172,24 @@ namespace CryptoDashboard.Infrastructure.Services
             }
 
             return result;
+        }
+
+        public async Task<List<CryptoPriceHistoryResponse>> GetPriceHistoryAsync(string coinId, int days = 7)
+        {
+            var url = $"{_options.BaseUrl}/coins/{coinId}/market_chart?vs_currency=usd&days={days}";
+            var response = await SendRateLimitedRequestAsync(url);
+            var json = await response.Content.ReadAsStringAsync();
+
+            using var doc = JsonDocument.Parse(json);
+            var prices = doc.RootElement.GetProperty("prices");
+
+            return prices.EnumerateArray()
+                .Select(p => new CryptoPriceHistoryResponse
+                {
+                    Timestamp = p[0].GetInt64(),
+                    Price = p[1].GetDecimal()
+                })
+                .ToList();
         }
 
         private async Task<HttpResponseMessage> SendRateLimitedRequestAsync(string url)
@@ -248,6 +279,28 @@ namespace CryptoDashboard.Infrastructure.Services
                 MarketCap = c.MarketCap ?? 0,
                 TotalVolume = c.TotalVolume ?? 0
             };
+        }
+        public async Task<List<CryptoOhlcResponse>> GetOhlcAsync(string coinId, int days = 7)
+        {
+            var url = $"{_options.BaseUrl}/coins/{coinId}/ohlc?vs_currency=usd&days={days}";
+            var response = await SendRateLimitedRequestAsync(url);
+            var json = await response.Content.ReadAsStringAsync();
+
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.EnumerateArray()
+                .Select(item =>
+                {
+                    var arr = item.EnumerateArray().ToList();
+                    return new CryptoOhlcResponse
+                    {
+                        Timestamp = arr[0].GetInt64(),
+                        Open = arr[1].GetDecimal(),
+                        High = arr[2].GetDecimal(),
+                        Low = arr[3].GetDecimal(),
+                        Close = arr[4].GetDecimal(),
+                    };
+                })
+                .ToList();
         }
     }
 }

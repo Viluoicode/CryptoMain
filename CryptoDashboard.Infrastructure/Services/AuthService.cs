@@ -1,13 +1,14 @@
-﻿using System;
+﻿using CryptoDashboard.Application.DTOs.Auth;
+using CryptoDashboard.Application.Interfaces;
+using CryptoDashboard.Domain.Entities;
+using CryptoDashboard.Infrastructure.Security;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using CryptoDashboard.Application.DTOs.Auth;
-using CryptoDashboard.Application.Interfaces;
-using CryptoDashboard.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 namespace CryptoDashboard.Infrastructure.Services
 {
@@ -53,7 +54,8 @@ namespace CryptoDashboard.Infrastructure.Services
             var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, user.Username);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
-            user.RefreshToken = refreshToken;
+            // Hash refresh token trước khi lưu (nhất quán với Login)
+            user.RefreshToken = TokenHasher.Hash(refreshToken);
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
             await _context.SaveChangesAsync();
 
@@ -71,6 +73,7 @@ namespace CryptoDashboard.Infrastructure.Services
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
+
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 throw new UnauthorizedAccessException("Invalid email or password");
@@ -78,10 +81,12 @@ namespace CryptoDashboard.Infrastructure.Services
 
             var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, user.Username);
             var refreshToken = _jwtService.GenerateRefreshToken();
+            var refreshTokenHash = TokenHasher.Hash(refreshToken);
 
-            user.RefreshToken = refreshToken;
+            user.RefreshToken = refreshTokenHash;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
             user.LastLoginAt = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
 
             return new AuthResponse
@@ -96,7 +101,8 @@ namespace CryptoDashboard.Infrastructure.Services
 
         public async Task<AuthResponse> RefreshTokenAsync(string refreshToken)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+            var tokenHash = TokenHasher.Hash(refreshToken);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.RefreshToken == tokenHash);
 
             if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             {
@@ -106,8 +112,9 @@ namespace CryptoDashboard.Infrastructure.Services
             var newAccessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, user.Username);
             var newRefreshToken = _jwtService.GenerateRefreshToken();
 
-            user.RefreshToken = newRefreshToken;
+            user.RefreshToken = TokenHasher.Hash(newRefreshToken);
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
             await _context.SaveChangesAsync();
 
             return new AuthResponse

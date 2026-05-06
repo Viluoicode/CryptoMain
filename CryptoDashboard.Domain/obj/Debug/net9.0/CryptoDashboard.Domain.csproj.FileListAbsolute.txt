@@ -1,0 +1,12 @@
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\bin\Debug\net9.0\CryptoDashboard.Domain.deps.json
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\bin\Debug\net9.0\CryptoDashboard.Domain.dll
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\bin\Debug\net9.0\CryptoDashboard.Domain.pdb
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\CryptoDashboard.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\CryptoDashboard.Domain.AssemblyInfoInputs.cache
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\CryptoDashboard.Domain.AssemblyInfo.cs
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\CryptoDashboard.Domain.csproj.CoreCompileInputs.cache
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\CryptoDashboard.Domain.dll
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\refint\CryptoDashboard.Domain.dll
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\CryptoDashboard.Domain.pdb
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\ref\CryptoDashboard.Domain.dll
+D:\DNTU\Tự Học\Crypto\CryptoDashboard.Domain\obj\Debug\net9.0\CryptoDashboard.Domain.sourcelink.json

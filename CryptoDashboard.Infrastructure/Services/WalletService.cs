@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// CryptoDashboard.Infrastructure/Services/WalletService.cs
 using CryptoDashboard.Application.DTOs.Crypto;
 using CryptoDashboard.Application.DTOs.Wallet;
 using CryptoDashboard.Application.Interfaces;
@@ -36,19 +32,13 @@ namespace CryptoDashboard.Infrastructure.Services
             _context.Wallets.Add(wallet);
             await _context.SaveChangesAsync();
 
-            return new WalletResponse
-            {
-                Id = wallet.Id,
-                Name = wallet.Name,
-                UserId = wallet.UserId,
-                CreatedAt = wallet.CreatedAt,
-                UpdatedAt = wallet.UpdatedAt
-            };
+            return MapToResponse(wallet);
         }
 
         public async Task<List<WalletResponse>> GetUserWalletsAsync(Guid userId)
         {
-            var wallets = await _context.Wallets
+            // HasQueryFilter đã lọc IsDeleted = false tự động
+            return await _context.Wallets
                 .Where(w => w.UserId == userId)
                 .OrderByDescending(w => w.CreatedAt)
                 .Select(w => new WalletResponse
@@ -60,8 +50,6 @@ namespace CryptoDashboard.Infrastructure.Services
                     UpdatedAt = w.UpdatedAt
                 })
                 .ToListAsync();
-
-            return wallets;
         }
 
         public async Task<WalletDetailResponse?> GetWalletByIdAsync(Guid walletId, Guid userId)
@@ -70,15 +58,9 @@ namespace CryptoDashboard.Infrastructure.Services
                 .Include(w => w.Transactions)
                 .FirstOrDefaultAsync(w => w.Id == walletId && w.UserId == userId);
 
-            if (wallet == null)
-            {
-                return null;
-            }
+            if (wallet == null) return null;
 
-            // Tính toán holdings từ transactions
             var holdings = await CalculateHoldingsAsync(wallet.Transactions);
-
-            // Tính tổng giá trị ví
             var totalValue = holdings.Sum(h => h.CurrentValue);
 
             return new WalletDetailResponse
@@ -98,46 +80,64 @@ namespace CryptoDashboard.Infrastructure.Services
             var wallet = await _context.Wallets
                 .FirstOrDefaultAsync(w => w.Id == walletId && w.UserId == userId);
 
-            if (wallet == null)
-            {
-                return null;
-            }
+            if (wallet == null) return null;
 
             wallet.Name = request.Name;
             wallet.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-
-            return new WalletResponse
+            try
             {
-                Id = wallet.Id,
-                Name = wallet.Name,
-                UserId = wallet.UserId,
-                CreatedAt = wallet.CreatedAt,
-                UpdatedAt = wallet.UpdatedAt
-            };
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                throw new InvalidOperationException(
+                  "Wallet was modified by another request. Please retry.");
+            }
+
+            return MapToResponse(wallet);
         }
 
         public async Task<bool> DeleteWalletAsync(Guid walletId, Guid userId)
         {
-            var wallet = await _context.Wallets
-                .FirstOrDefaultAsync(w => w.Id == walletId && w.UserId == userId);
-
-            if (wallet == null)
+            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                return false;
+                var wallet = await _context.Wallets
+                    .Include(w => w.Transactions)
+                    .FirstOrDefaultAsync(w => w.Id == walletId && w.UserId == userId);
+
+                if (wallet == null) return false;
+
+                // Soft Delete tất cả transactions trong ví trước
+                foreach (var tx in wallet.Transactions)
+                {
+                    _context.Transactions.Remove(tx); // intercepted → soft delete
+                }
+
+                // Soft Delete ví
+                _context.Wallets.Remove(wallet); // intercepted → soft delete
+
+                await _context.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+                return true;
             }
-
-            _context.Wallets.Remove(wallet);
-            await _context.SaveChangesAsync();
-
-            return true;
+            catch (DbUpdateConcurrencyException)
+            {
+                throw new InvalidOperationException(
+                "Wallet was modified by another request. Please retry.");
+            }
+            catch
+            {
+                await dbTransaction.RollbackAsync();
+                throw;
+            }
         }
 
-        // Helper method: Tính holdings từ transactions
+        // ── Helper: tính holdings ──────────────────────────────────────────────
         private async Task<List<HoldingResponse>> CalculateHoldingsAsync(ICollection<Transaction> transactions)
         {
-            // Group transactions by coinId
             var grouped = transactions
                 .GroupBy(t => new { t.CoinId, t.CoinSymbol, t.CoinName })
                 .Select(g => new
@@ -149,10 +149,9 @@ namespace CryptoDashboard.Infrastructure.Services
                     SellQuantity = g.Where(t => t.Type == TransactionType.Sell).Sum(t => t.Quantity),
                     TotalInvested = g.Where(t => t.Type == TransactionType.Buy).Sum(t => t.TotalAmount)
                 })
-                .Where(x => x.BuyQuantity > x.SellQuantity) // Chỉ lấy coin còn nắm giữ
+                .Where(x => x.BuyQuantity > x.SellQuantity)
                 .ToList();
 
-            // Batch fetch all coin prices in a single API call (fixes N+1 problem)
             var coinIds = grouped.Select(g => g.CoinId).Distinct().ToList();
             Dictionary<string, CryptoListResponse> coinDataMap;
             try
@@ -161,24 +160,20 @@ namespace CryptoDashboard.Infrastructure.Services
             }
             catch
             {
-                // Fallback: empty map — will use avgBuyPrice below
                 coinDataMap = new Dictionary<string, CryptoListResponse>();
             }
 
             var holdings = new List<HoldingResponse>();
-
             foreach (var item in grouped)
             {
                 var quantity = item.BuyQuantity - item.SellQuantity;
                 var avgBuyPrice = item.TotalInvested / item.BuyQuantity;
 
-                // Get current price from batch result, fallback to avgBuyPrice
                 coinDataMap.TryGetValue(item.CoinId, out var coinData);
                 var currentPrice = coinData?.CurrentPrice ?? avgBuyPrice;
-
                 var currentValue = quantity * currentPrice;
                 var profitLoss = currentValue - (quantity * avgBuyPrice);
-                var profitLossPercentage = avgBuyPrice > 0
+                var profitLossPct = avgBuyPrice > 0
                     ? (profitLoss / (quantity * avgBuyPrice)) * 100
                     : 0;
 
@@ -192,11 +187,20 @@ namespace CryptoDashboard.Infrastructure.Services
                     CurrentPrice = currentPrice,
                     CurrentValue = currentValue,
                     ProfitLoss = profitLoss,
-                    ProfitLossPercentage = profitLossPercentage
+                    ProfitLossPercentage = profitLossPct
                 });
             }
 
             return holdings;
         }
+
+        private static WalletResponse MapToResponse(Wallet w) => new()
+        {
+            Id = w.Id,
+            Name = w.Name,
+            UserId = w.UserId,
+            CreatedAt = w.CreatedAt,
+            UpdatedAt = w.UpdatedAt
+        };
     }
 }

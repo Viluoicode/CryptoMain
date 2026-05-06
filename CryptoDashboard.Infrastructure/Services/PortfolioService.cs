@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CryptoDashboard.Infrastructure.Services
 {
-  
+
     public class PortfolioService : IPortfolioService
     {
         private readonly IApplicationDbContext _context;
@@ -70,6 +70,8 @@ namespace CryptoDashboard.Infrastructure.Services
                 var currentPrice = coinData?.CurrentPrice ?? 0m;
                 var currentValue = qty * currentPrice;
 
+                var investedValue = coin.BuyAmount - coin.SellAmount;
+
                 allocations.Add(new PortfolioCoinAllocationResponse
                 {
                     CoinId = coin.CoinId,
@@ -77,7 +79,8 @@ namespace CryptoDashboard.Infrastructure.Services
                     CoinName = coin.CoinName,
                     Quantity = qty,
                     CurrentPrice = currentPrice,
-                    CurrentValue = currentValue
+                    CurrentValue = currentValue,
+                    InvestedValue = investedValue
                 });
             }
 
@@ -139,6 +142,52 @@ namespace CryptoDashboard.Infrastructure.Services
                 TotalBuyTransactions = allTransactions.Count(t => t.Type == TransactionType.Buy),
                 TotalSellTransactions = allTransactions.Count(t => t.Type == TransactionType.Sell)
             };
+        }
+        public async Task<List<PortfolioHistoryPoint>> GetPortfolioHistoryAsync(string userId, int days = 30)
+        {
+            // Lấy tất cả transactions của user (đã có sẵn)
+            var transactions = await _context.Transactions
+                .Include(t => t.Wallet)
+                .Where(t => t.Wallet.UserId == Guid.Parse(userId))
+                .OrderBy(t => t.TransactionDate)
+                .ToListAsync();
+
+            if (!transactions.Any()) return new List<PortfolioHistoryPoint>();
+
+            // Lấy tất cả coinIds đang hold
+            var coinIds = transactions.Select(t => t.CoinId).Distinct().ToList();
+
+            // Lấy giá hiện tại từ CryptoService
+            var prices = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds);
+
+            var result = new List<PortfolioHistoryPoint>();
+            var today = DateTime.UtcNow.Date;
+            var startDate = today.AddDays(-days);
+
+            for (var date = startDate; date <= today; date = date.AddDays(1))
+            {
+                // Tính holdings tại ngày đó (dựa vào transactions đã xảy ra)
+                decimal totalValue = 0;
+                foreach (var coinId in coinIds)
+                {
+                    var txUpToDate = transactions
+                        .Where(t => t.CoinId == coinId && t.TransactionDate.Date <= date)
+                        .ToList();
+
+                    var qty = txUpToDate.Sum(t => t.Type == TransactionType.Buy
+                        ? t.Quantity
+                        : -t.Quantity);
+
+                    if (qty <= 0) continue;
+
+                    var price = prices.TryGetValue(coinId, out var p) ? p.CurrentPrice : 0;
+                    totalValue += qty * price;
+                }
+
+                result.Add(new PortfolioHistoryPoint { Date = date, TotalValue = totalValue });
+            }
+
+            return result;
         }
     }
 }

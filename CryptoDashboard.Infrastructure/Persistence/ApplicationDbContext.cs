@@ -1,4 +1,6 @@
-﻿using CryptoDashboard.Application.Interfaces;
+﻿// CryptoDashboard.Infrastructure/Persistence/ApplicationDbContext.cs
+using CryptoDashboard.Application.Interfaces;
+using CryptoDashboard.Domain.Common;
 using CryptoDashboard.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +23,7 @@ namespace CryptoDashboard.Infrastructure.Persistence
         {
             base.OnModelCreating(modelBuilder);
 
-            // User configuration
+            // ─── User ──────────────────────────────────────────────────────────
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -31,19 +33,30 @@ namespace CryptoDashboard.Infrastructure.Persistence
                 entity.Property(e => e.PasswordHash).IsRequired();
             });
 
-            // Wallet configuration
+            // ─── Wallet ────────────────────────────────────────────────────────
             modelBuilder.Entity<Wallet>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.RowVersion).IsRowVersion();
 
                 entity.HasOne(e => e.User)
                       .WithMany(u => u.Wallets)
                       .HasForeignKey(e => e.UserId)
                       .OnDelete(DeleteBehavior.Cascade);
+                // Trong OnModelCreating, phần Wallet
+                entity.Property(e => e.RowVersion)
+                      .IsRowVersion()
+                      .IsConcurrencyToken();
+                // ── Index ──
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => new { e.UserId, e.IsDeleted });
+
+                // ── Soft Delete filter ──
+                entity.HasQueryFilter(e => !e.IsDeleted);
             });
 
-            // Transaction configuration
+            // ─── Transaction ───────────────────────────────────────────────────
             modelBuilder.Entity<Transaction>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -59,9 +72,18 @@ namespace CryptoDashboard.Infrastructure.Persistence
                       .WithMany(w => w.Transactions)
                       .HasForeignKey(e => e.WalletId)
                       .OnDelete(DeleteBehavior.Cascade);
+
+                // ── Index ──
+                entity.HasIndex(e => e.WalletId);
+                entity.HasIndex(e => e.TransactionDate);
+                entity.HasIndex(e => new { e.WalletId, e.IsDeleted });
+                entity.HasIndex(e => new { e.WalletId, e.TransactionDate });
+
+                // ── Soft Delete filter ──
+                entity.HasQueryFilter(e => !e.IsDeleted);
             });
 
-            // PriceHistory configuration
+            // ─── PriceHistory ──────────────────────────────────────────────────
             modelBuilder.Entity<PriceHistory>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -69,11 +91,10 @@ namespace CryptoDashboard.Infrastructure.Persistence
                 entity.Property(e => e.Price).HasPrecision(18, 8);
                 entity.Property(e => e.MarketCap).HasPrecision(28, 2);
                 entity.Property(e => e.Volume24h).HasPrecision(28, 2);
-
                 entity.HasIndex(e => new { e.CoinId, e.RecordedAt });
             });
 
-            // PortfolioSnapshot configuration
+            // ─── PortfolioSnapshot ─────────────────────────────────────────────
             modelBuilder.Entity<PortfolioSnapshot>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -90,8 +111,32 @@ namespace CryptoDashboard.Infrastructure.Persistence
             });
         }
 
+        // ── Soft Delete + Audit tự động khi SaveChanges ────────────────────────
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
+            foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+            {
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        entry.Entity.CreatedAt = DateTime.UtcNow;
+                        entry.Entity.UpdatedAt = DateTime.UtcNow;
+                        break;
+
+                    case EntityState.Modified:
+                        entry.Entity.UpdatedAt = DateTime.UtcNow;
+                        break;
+
+                    case EntityState.Deleted:
+                        // Soft Delete
+                        entry.State = EntityState.Modified;
+                        entry.Entity.IsDeleted = true;
+                        entry.Entity.DeletedAt = DateTime.UtcNow;
+                        entry.Entity.UpdatedAt = DateTime.UtcNow;
+                        break;
+                }
+            }
+
             return base.SaveChangesAsync(cancellationToken);
         }
     }

@@ -1,19 +1,21 @@
-﻿using CryptoDashboard.Application.Interfaces;
+﻿using CryptoDashboard.Api.Middleware;
+using CryptoDashboard.Application.Interfaces;
 using CryptoDashboard.Application.Options;
-using CryptoDashboard.Api.Middleware;
+using CryptoDashboard.Application.Validators;
 using CryptoDashboard.Infrastructure.Caching;
 using CryptoDashboard.Infrastructure.Persistence;
 using CryptoDashboard.Infrastructure.Services;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http;
 using Microsoft.IdentityModel.Tokens;
-using System.Net;
-using System.Text;
 using Microsoft.OpenApi.Models;
 using Polly;
 using Polly.Extensions.Http;
-
+using System.Net;
+using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -84,6 +86,8 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateTransactionRequestValidator>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {

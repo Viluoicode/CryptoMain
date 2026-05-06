@@ -11,5 +11,6 @@ namespace CryptoDashboard.Application.Interfaces
     {
         Task<PortfolioSummaryResponse> GetPortfolioSummaryAsync(Guid userId);
         Task<PortfolioPerformanceResponse> GetPortfolioPerformanceAsync(Guid userId);
+        Task<List<PortfolioHistoryPoint>> GetPortfolioHistoryAsync(string userId, int days = 30);
     }
 }

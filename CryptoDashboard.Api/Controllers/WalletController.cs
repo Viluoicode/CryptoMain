@@ -62,15 +62,22 @@ namespace CryptoDashboard.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateWallet(Guid id, [FromBody] UpdateWalletRequest request)
         {
-            var userId = GetCurrentUserId();
-            var wallet = await _walletService.UpdateWalletAsync(id, userId, request);
-
-            if (wallet == null)
+            try
             {
-                return NotFound(new { message = "Wallet not found or you don't have permission" });
-            }
+                var userId = GetCurrentUserId();
+                var wallet = await _walletService.UpdateWalletAsync(id, userId, request);
 
-            return Ok(wallet);
+                if (wallet == null)
+                {
+                    return NotFound(new { message = "Wallet not found or you don't have permission" });
+                }
+
+                return Ok(wallet);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -79,15 +86,22 @@ namespace CryptoDashboard.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteWallet(Guid id)
         {
-            var userId = GetCurrentUserId();
-            var success = await _walletService.DeleteWalletAsync(id, userId);
-
-            if (!success)
+            try
             {
-                return NotFound(new { message = "Wallet not found or you don't have permission" });
-            }
+                var userId = GetCurrentUserId();
+                var success = await _walletService.DeleteWalletAsync(id, userId);
 
-            return NoContent();
+                if (!success)
+                {
+                    return NotFound(new { message = "Wallet not found or you don't have permission" });
+                }
+
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // Helper: Lấy UserId từ JWT token

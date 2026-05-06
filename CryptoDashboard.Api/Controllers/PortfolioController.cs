@@ -44,5 +44,14 @@ namespace CryptoDashboard.Api.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return Guid.Parse(userIdClaim!);
         }
+        [HttpGet("history")]
+        public async Task<IActionResult> GetPortfolioHistory([FromQuery] int days = 30)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null) return Unauthorized();
+
+            var result = await _portfolioService.GetPortfolioHistoryAsync(userId, days);
+            return Ok(result);
+        }
     }
 }
