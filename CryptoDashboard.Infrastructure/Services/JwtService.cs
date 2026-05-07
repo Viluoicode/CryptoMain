@@ -28,8 +28,19 @@ namespace CryptoDashboard.Infrastructure.Services
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT Secret not configured")));
+            var secretKey = _configuration["Jwt:SecretKey"];
+            if (string.IsNullOrWhiteSpace(secretKey))
+            {
+                throw new InvalidOperationException("JWT Secret not configured");
+            }
+
+            var accessTokenExpirationMinutes = _configuration.GetValue<double?>("Jwt:AccessTokenExpirationMinutes");
+            if (accessTokenExpirationMinutes is null || accessTokenExpirationMinutes <= 0)
+            {
+                throw new InvalidOperationException("JWT AccessTokenExpirationMinutes is missing or invalid");
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -37,7 +48,7 @@ namespace CryptoDashboard.Infrastructure.Services
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:AccessTokenExpirationMinutes"])),
+                expires: DateTime.UtcNow.AddMinutes(accessTokenExpirationMinutes.Value),
                 signingCredentials: credentials
             );
 
@@ -54,13 +65,18 @@ namespace CryptoDashboard.Infrastructure.Services
 
         public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
         {
+            var secretKey = _configuration["Jwt:SecretKey"];
+            if (string.IsNullOrWhiteSpace(secretKey))
+            {
+                throw new InvalidOperationException("JWT Secret not configured");
+            }
+
             var tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateAudience = false,
                 ValidateIssuer = false,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                    _configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT Secret not configured"))),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                 ValidateLifetime = false // Không check expiry vì đang xử lý refresh
             };
 

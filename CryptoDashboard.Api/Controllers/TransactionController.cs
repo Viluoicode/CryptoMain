@@ -45,24 +45,29 @@ namespace CryptoDashboard.Api.Controllers
         /// Lấy tất cả giao dịch của user hiện tại
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetTransactions()
+        public async Task<IActionResult> GetTransactions(
+       [FromQuery] int page = 1,
+       [FromQuery] int pageSize = 20)
         {
+            // Giới hạn pageSize tối đa 100
+            pageSize = Math.Min(pageSize, 100);
             var userId = GetCurrentUserId();
-            var transactions = await _transactionService.GetUserTransactionsAsync(userId);
-            return Ok(transactions);
+            var result = await _transactionService.GetUserTransactionsAsync(userId, page, pageSize);
+            return Ok(result);
         }
 
-        /// <summary>
-        /// Lấy giao dịch của 1 ví cụ thể
-        /// </summary>
         [HttpGet("wallet/{walletId}")]
-        public async Task<IActionResult> GetWalletTransactions(Guid walletId)
+        public async Task<IActionResult> GetWalletTransactions(
+            Guid walletId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
             try
             {
+                pageSize = Math.Min(pageSize, 100);
                 var userId = GetCurrentUserId();
-                var transactions = await _transactionService.GetWalletTransactionsAsync(walletId, userId);
-                return Ok(transactions);
+                var result = await _transactionService.GetWalletTransactionsAsync(walletId, userId, page, pageSize);
+                return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
             {

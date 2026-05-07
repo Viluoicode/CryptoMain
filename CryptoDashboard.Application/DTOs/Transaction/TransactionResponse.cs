@@ -23,3 +23,4 @@ namespace CryptoDashboard.Application.DTOs.Transaction
         public string? Notes { get; set; }
     }
 }
+    

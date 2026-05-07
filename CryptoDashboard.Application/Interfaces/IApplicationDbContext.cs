@@ -1,10 +1,11 @@
-﻿using System;
+﻿using CryptoDashboard.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using CryptoDashboard.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace CryptoDashboard.Application.Interfaces
 {
@@ -15,6 +16,7 @@ namespace CryptoDashboard.Application.Interfaces
         DbSet<Transaction> Transactions { get; }
         DbSet<PriceHistory> PriceHistories { get; }
         DbSet<PortfolioSnapshot> PortfolioSnapshots { get; }
+        DatabaseFacade Database { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }
