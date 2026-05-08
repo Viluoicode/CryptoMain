@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Polly;
 using Polly.Extensions.Http;
 using System.Net;
@@ -23,7 +24,7 @@ builder.Services.AddOpenApi();
 
 // Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
+    options.UseNpgsql(
         builder.Configuration.GetConnectionString("MyConnect"),
         b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
