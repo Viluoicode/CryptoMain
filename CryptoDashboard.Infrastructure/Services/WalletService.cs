@@ -1,4 +1,4 @@
-﻿// CryptoDashboard.Infrastructure/Services/WalletService.cs
+// CryptoDashboard.Infrastructure/Services/WalletService.cs
 using CryptoDashboard.Application.DTOs.Crypto;
 using CryptoDashboard.Application.DTOs.Wallet;
 using CryptoDashboard.Application.Interfaces;
@@ -25,6 +25,7 @@ namespace CryptoDashboard.Infrastructure.Services
                 Id = Guid.NewGuid(),
                 Name = request.Name,
                 UserId = userId,
+                FiatBalance = 10_000m, // Starting paper-trade balance
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -37,7 +38,6 @@ namespace CryptoDashboard.Infrastructure.Services
 
         public async Task<List<WalletResponse>> GetUserWalletsAsync(Guid userId)
         {
-            // HasQueryFilter đã lọc IsDeleted = false tự động
             return await _context.Wallets
                 .Where(w => w.UserId == userId)
                 .OrderByDescending(w => w.CreatedAt)
@@ -46,6 +46,7 @@ namespace CryptoDashboard.Infrastructure.Services
                     Id = w.Id,
                     Name = w.Name,
                     UserId = w.UserId,
+                    FiatBalance = w.FiatBalance,
                     CreatedAt = w.CreatedAt,
                     UpdatedAt = w.UpdatedAt
                 })
@@ -67,6 +68,7 @@ namespace CryptoDashboard.Infrastructure.Services
             {
                 Id = wallet.Id,
                 Name = wallet.Name,
+                FiatBalance = wallet.FiatBalance,
                 CreatedAt = wallet.CreatedAt,
                 UpdatedAt = wallet.UpdatedAt,
                 Holdings = holdings,
@@ -85,15 +87,25 @@ namespace CryptoDashboard.Infrastructure.Services
             wallet.Name = request.Name;
             wallet.UpdatedAt = DateTime.UtcNow;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                throw new InvalidOperationException(
-                  "Wallet was modified by another request. Please retry.");
-            }
+            await _context.SaveChangesAsync();
+
+            return MapToResponse(wallet);
+        }
+
+        public async Task<WalletResponse?> DepositFiatAsync(Guid walletId, Guid userId, DepositFiatRequest request)
+        {
+            if (request.Amount <= 0)
+                throw new ArgumentException("Deposit amount must be positive.");
+            if (request.Amount > 1_000_000)
+                throw new ArgumentException("Maximum deposit per transaction is $1,000,000.");
+
+            var wallet = await _context.Wallets
+                .FirstOrDefaultAsync(w => w.Id == walletId && w.UserId == userId);
+
+            if (wallet == null) return null;
+
+            wallet.FiatBalance += request.Amount;
+            await _context.SaveChangesAsync();
 
             return MapToResponse(wallet);
         }
@@ -109,24 +121,17 @@ namespace CryptoDashboard.Infrastructure.Services
 
                 if (wallet == null) return false;
 
-                // Soft Delete tất cả transactions trong ví trước
                 foreach (var tx in wallet.Transactions)
                 {
-                    _context.Transactions.Remove(tx); // intercepted → soft delete
+                    _context.Transactions.Remove(tx);
                 }
 
-                // Soft Delete ví
-                _context.Wallets.Remove(wallet); // intercepted → soft delete
+                _context.Wallets.Remove(wallet);
 
                 await _context.SaveChangesAsync();
                 await dbTransaction.CommitAsync();
 
                 return true;
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                throw new InvalidOperationException(
-                "Wallet was modified by another request. Please retry.");
             }
             catch
             {
@@ -167,7 +172,7 @@ namespace CryptoDashboard.Infrastructure.Services
             foreach (var item in grouped)
             {
                 var quantity = item.BuyQuantity - item.SellQuantity;
-                var avgBuyPrice = item.TotalInvested / item.BuyQuantity;
+                var avgBuyPrice = item.BuyQuantity > 0 ? item.TotalInvested / item.BuyQuantity : 0;
 
                 coinDataMap.TryGetValue(item.CoinId, out var coinData);
                 var currentPrice = coinData?.CurrentPrice ?? avgBuyPrice;
@@ -199,6 +204,7 @@ namespace CryptoDashboard.Infrastructure.Services
             Id = w.Id,
             Name = w.Name,
             UserId = w.UserId,
+            FiatBalance = w.FiatBalance,
             CreatedAt = w.CreatedAt,
             UpdatedAt = w.UpdatedAt
         };

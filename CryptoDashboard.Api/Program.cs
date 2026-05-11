@@ -37,6 +37,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IPortfolioService, PortfolioService>();
+builder.Services.AddScoped<IWatchlistService, WatchlistService>();
 
 // CryptoApi Options
 var cryptoApiSection = builder.Configuration.GetSection(CryptoApiOptions.SectionName);
@@ -130,6 +131,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ICryptoPriceCache, MemoryCryptoPriceCache>();
+
+// Background price refresh
+builder.Services.AddHostedService<CryptoPriceRefreshService>();
 
 // Crypto Service with Polly Resilience Policies
 builder.Services.AddHttpClient<ICryptoService, CryptoService>(client =>

@@ -1,5 +1,6 @@
 ﻿using CryptoDashboard.Application.DTOs.Transaction;
 using CryptoDashboard.Application.Interfaces;
+using CryptoDashboard.Domain.Entities;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +36,10 @@ namespace CryptoDashboard.Api.Controllers
             {
                 return NotFound(new { message = ex.Message });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -42,17 +47,21 @@ namespace CryptoDashboard.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy tất cả giao dịch của user hiện tại
+        /// Lấy tất cả giao dịch của user hiện tại (có filter, search, sort)
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetTransactions(
-       [FromQuery] int page = 1,
-       [FromQuery] int pageSize = 20)
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] TransactionType? type = null,
+            [FromQuery] string? search = null,
+            [FromQuery] string? sortBy = null,
+            [FromQuery] string? sortDir = null)
         {
-            // Giới hạn pageSize tối đa 100
             pageSize = Math.Min(pageSize, 100);
             var userId = GetCurrentUserId();
-            var result = await _transactionService.GetUserTransactionsAsync(userId, page, pageSize);
+            var result = await _transactionService.GetUserTransactionsAsync(
+                userId, page, pageSize, type, search, sortBy, sortDir);
             return Ok(result);
         }
 
@@ -60,18 +69,43 @@ namespace CryptoDashboard.Api.Controllers
         public async Task<IActionResult> GetWalletTransactions(
             Guid walletId,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
+            [FromQuery] int pageSize = 20,
+            [FromQuery] TransactionType? type = null,
+            [FromQuery] string? search = null,
+            [FromQuery] string? sortBy = null,
+            [FromQuery] string? sortDir = null)
         {
             try
             {
                 pageSize = Math.Min(pageSize, 100);
                 var userId = GetCurrentUserId();
-                var result = await _transactionService.GetWalletTransactionsAsync(walletId, userId, page, pageSize);
+                var result = await _transactionService.GetWalletTransactionsAsync(
+                    walletId, userId, page, pageSize, type, search, sortBy, sortDir);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật giao dịch
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTransaction(Guid id, [FromBody] UpdateTransactionRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _transactionService.UpdateTransactionAsync(id, userId, request);
+                if (result == null)
+                    return NotFound(new { message = "Transaction not found or you don't have permission" });
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 

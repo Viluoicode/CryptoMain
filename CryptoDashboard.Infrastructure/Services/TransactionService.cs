@@ -1,4 +1,4 @@
-﻿// CryptoDashboard.Infrastructure/Services/TransactionService.cs
+// CryptoDashboard.Infrastructure/Services/TransactionService.cs
 using CryptoDashboard.Application.DTOs.Common;
 using CryptoDashboard.Application.DTOs.Transaction;
 using CryptoDashboard.Application.Interfaces;
@@ -18,34 +18,44 @@ namespace CryptoDashboard.Infrastructure.Services
             _cryptoService = cryptoService;
         }
 
+        // ── Create ────────────────────────────────────────────────────────────
         public async Task<TransactionResponse> CreateTransactionAsync(Guid userId, CreateTransactionRequest request)
         {
-            // ── Bọc toàn bộ trong DB Transaction ──────────────────────────────
-            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+            await using var dbTx = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Verify wallet belongs to user
                 var wallet = await _context.Wallets
                     .FirstOrDefaultAsync(w => w.Id == request.WalletId && w.UserId == userId);
 
                 if (wallet == null)
                     throw new UnauthorizedAccessException("Wallet not found or you don't have permission");
 
-                // Get coin info from CoinGecko
                 var coinData = await _cryptoService.GetCryptocurrencyByIdAsync(request.CoinId);
                 if (coinData == null)
                     throw new ArgumentException($"Coin '{request.CoinId}' not found");
 
-                // ── Validate Sell: kiểm tra số dư ────────────────────────────
-                if (request.Type == TransactionType.Sell)
+                var totalCost = request.Quantity * request.PricePerCoin;
+
+                if (request.Type == TransactionType.Buy)
                 {
+                    // Check fiat balance
+                    if (wallet.FiatBalance < totalCost)
+                        throw new InvalidOperationException(
+                            $"Insufficient fiat balance. Available: ${wallet.FiatBalance:F2}, Required: ${totalCost:F2}");
+
+                    wallet.FiatBalance -= totalCost;
+                }
+                else if (request.Type == TransactionType.Sell)
+                {
+                    // Check coin balance
                     var currentQty = await GetCoinQuantityAsync(request.WalletId, request.CoinId);
                     if (request.Quantity > currentQty)
                         throw new InvalidOperationException(
-                            $"Insufficient balance. Available: {currentQty}, Requested: {request.Quantity}");
+                            $"Insufficient coin balance. Available: {currentQty}, Requested: {request.Quantity}");
+
+                    wallet.FiatBalance += totalCost;
                 }
 
-                // Create transaction
                 var transaction = new Transaction
                 {
                     Id = Guid.NewGuid(),
@@ -56,55 +66,167 @@ namespace CryptoDashboard.Infrastructure.Services
                     Type = request.Type,
                     Quantity = request.Quantity,
                     PricePerCoin = request.PricePerCoin,
-                    TotalAmount = request.Quantity * request.PricePerCoin,
+                    TotalAmount = totalCost,
                     TransactionDate = request.TransactionDate ?? DateTime.UtcNow,
                     Notes = request.Notes
                 };
 
                 _context.Transactions.Add(transaction);
-
-                // Update wallet UpdatedAt
                 wallet.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
-                await dbTransaction.CommitAsync();
+                await dbTx.CommitAsync();
 
                 return MapToResponse(transaction, wallet.Name);
             }
             catch
             {
-                await dbTransaction.RollbackAsync();
+                await dbTx.RollbackAsync();
                 throw;
             }
         }
 
+        // ── Update ────────────────────────────────────────────────────────────
+        public async Task<TransactionResponse?> UpdateTransactionAsync(
+            Guid transactionId, Guid userId, UpdateTransactionRequest request)
+        {
+            await using var dbTx = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var transaction = await _context.Transactions
+                    .Include(t => t.Wallet)
+                    .FirstOrDefaultAsync(t => t.Id == transactionId && t.Wallet.UserId == userId);
+
+                if (transaction == null) return null;
+
+                var wallet = transaction.Wallet;
+                var oldTotalCost = transaction.TotalAmount;
+                var newTotalCost = request.Quantity * request.PricePerCoin;
+
+                // Reverse the old fiat effect, then apply new one
+                if (transaction.Type == TransactionType.Buy)
+                    wallet.FiatBalance += oldTotalCost; // refund old cost
+                else
+                    wallet.FiatBalance -= oldTotalCost; // undo old sell proceeds
+
+                if (request.Type == TransactionType.Buy)
+                {
+                    if (wallet.FiatBalance < newTotalCost)
+                        throw new InvalidOperationException(
+                            $"Insufficient fiat balance. Available: ${wallet.FiatBalance:F2}, Required: ${newTotalCost:F2}");
+                    wallet.FiatBalance -= newTotalCost;
+                }
+                else if (request.Type == TransactionType.Sell)
+                {
+                    // Calculate coin balance excluding this transaction
+                    var qtyExcludingThis = await GetCoinQuantityExcludingAsync(
+                        transaction.WalletId, transaction.CoinId, transactionId);
+                    if (request.Quantity > qtyExcludingThis)
+                        throw new InvalidOperationException(
+                            $"Insufficient coin balance. Available: {qtyExcludingThis}, Requested: {request.Quantity}");
+
+                    wallet.FiatBalance += newTotalCost;
+                }
+
+                transaction.Type = request.Type;
+                transaction.Quantity = request.Quantity;
+                transaction.PricePerCoin = request.PricePerCoin;
+                transaction.TotalAmount = newTotalCost;
+                transaction.Notes = request.Notes;
+                if (request.TransactionDate.HasValue)
+                    transaction.TransactionDate = request.TransactionDate.Value;
+
+                wallet.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                await dbTx.CommitAsync();
+
+                return MapToResponse(transaction, wallet.Name);
+            }
+            catch
+            {
+                await dbTx.RollbackAsync();
+                throw;
+            }
+        }
+
+        // ── Delete ────────────────────────────────────────────────────────────
+        public async Task<bool> DeleteTransactionAsync(Guid transactionId, Guid userId)
+        {
+            await using var dbTx = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var transaction = await _context.Transactions
+                    .Include(t => t.Wallet)
+                    .FirstOrDefaultAsync(t => t.Id == transactionId && t.Wallet.UserId == userId);
+
+                if (transaction == null) return false;
+
+                var wallet = transaction.Wallet;
+
+                // Reverse the fiat balance effect
+                if (transaction.Type == TransactionType.Buy)
+                    wallet.FiatBalance += transaction.TotalAmount; // refund
+                else
+                    wallet.FiatBalance -= transaction.TotalAmount; // undo sell proceeds
+
+                _context.Transactions.Remove(transaction);
+                wallet.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                await dbTx.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await dbTx.RollbackAsync();
+                throw;
+            }
+        }
+
+        // ── Get user transactions (paginated + filter + search + sort) ─────────
         public async Task<PagedResult<TransactionResponse>> GetUserTransactionsAsync(
-       Guid userId, int page = 1, int pageSize = 20)
+            Guid userId, int page = 1, int pageSize = 20,
+            TransactionType? type = null, string? search = null,
+            string? sortBy = null, string? sortDir = null)
         {
             var query = _context.Transactions
                 .Include(t => t.Wallet)
                 .Where(t => t.Wallet.UserId == userId)
-                .OrderByDescending(t => t.TransactionDate);
+                .Where(t => type == null || t.Type == type);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(t =>
+                    t.CoinId.ToLower().Contains(s) ||
+                    t.CoinSymbol.ToLower().Contains(s) ||
+                    t.CoinName.ToLower().Contains(s));
+            }
+
+            query = ApplySorting(query, sortBy, sortDir);
 
             var totalCount = await query.CountAsync();
 
             var items = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(t => new TransactionResponse { /* ... giữ nguyên */ })
                 .ToListAsync();
 
             return new PagedResult<TransactionResponse>
             {
-                Items = items,
+                Items = items.Select(t => MapToResponse(t, t.Wallet.Name)).ToList(),
                 Page = page,
                 PageSize = pageSize,
                 TotalCount = totalCount
             };
         }
 
+        // ── Get wallet transactions (paginated + filter + search + sort) ───────
         public async Task<PagedResult<TransactionResponse>> GetWalletTransactionsAsync(
-            Guid walletId, Guid userId, int page = 1, int pageSize = 20)
+            Guid walletId, Guid userId, int page = 1, int pageSize = 20,
+            TransactionType? type = null, string? search = null,
+            string? sortBy = null, string? sortDir = null)
         {
             var walletExists = await _context.Wallets
                 .AnyAsync(w => w.Id == walletId && w.UserId == userId);
@@ -115,67 +237,89 @@ namespace CryptoDashboard.Infrastructure.Services
             var query = _context.Transactions
                 .Include(t => t.Wallet)
                 .Where(t => t.WalletId == walletId)
-                .OrderByDescending(t => t.TransactionDate);
+                .Where(t => type == null || t.Type == type);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(t =>
+                    t.CoinId.ToLower().Contains(s) ||
+                    t.CoinSymbol.ToLower().Contains(s) ||
+                    t.CoinName.ToLower().Contains(s));
+            }
+
+            query = ApplySorting(query, sortBy, sortDir);
 
             var totalCount = await query.CountAsync();
 
             var items = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(t => new TransactionResponse { /* ... giữ nguyên */ })
                 .ToListAsync();
 
             return new PagedResult<TransactionResponse>
             {
-                Items = items,
+                Items = items.Select(t => MapToResponse(t, t.Wallet.Name)).ToList(),
                 Page = page,
                 PageSize = pageSize,
                 TotalCount = totalCount
             };
         }
 
-        public async Task<bool> DeleteTransactionAsync(Guid transactionId, Guid userId)
+        // ── Helpers ───────────────────────────────────────────────────────────
+        private static IQueryable<Transaction> ApplySorting(
+            IQueryable<Transaction> query, string? sortBy, string? sortDir)
         {
-            var transaction = await _context.Transactions
-                .Include(t => t.Wallet)
-                .FirstOrDefaultAsync(t => t.Id == transactionId && t.Wallet.UserId == userId);
+            var descending = string.Equals(sortDir, "desc", StringComparison.OrdinalIgnoreCase)
+                             || string.IsNullOrEmpty(sortDir); // default desc
 
-            if (transaction == null) return false;
-
-            // Soft Delete — ApplicationDbContext.SaveChangesAsync tự chuyển
-            // EntityState.Deleted → IsDeleted = true, DeletedAt = UtcNow
-            _context.Transactions.Remove(transaction);
-            await _context.SaveChangesAsync();
-
-            return true;
+            return sortBy?.ToLower() switch
+            {
+                "coin"        => descending ? query.OrderByDescending(t => t.CoinName)  : query.OrderBy(t => t.CoinName),
+                "amount"      => descending ? query.OrderByDescending(t => t.TotalAmount) : query.OrderBy(t => t.TotalAmount),
+                "quantity"    => descending ? query.OrderByDescending(t => t.Quantity)  : query.OrderBy(t => t.Quantity),
+                "price"       => descending ? query.OrderByDescending(t => t.PricePerCoin) : query.OrderBy(t => t.PricePerCoin),
+                "type"        => descending ? query.OrderByDescending(t => t.Type)      : query.OrderBy(t => t.Type),
+                _             => descending ? query.OrderByDescending(t => t.TransactionDate) : query.OrderBy(t => t.TransactionDate)
+            };
         }
 
-        // ── Helper: tính số coin hiện có trong ví ─────────────────────────────
         private async Task<decimal> GetCoinQuantityAsync(Guid walletId, string coinId)
         {
             var transactions = await _context.Transactions
                 .Where(t => t.WalletId == walletId && t.CoinId == coinId)
                 .ToListAsync();
 
-            var buyQty = transactions.Where(t => t.Type == TransactionType.Buy).Sum(t => t.Quantity);
-            var sellQty = transactions.Where(t => t.Type == TransactionType.Sell).Sum(t => t.Quantity);
-            return buyQty - sellQty;
+            var buy  = transactions.Where(t => t.Type == TransactionType.Buy).Sum(t => t.Quantity);
+            var sell = transactions.Where(t => t.Type == TransactionType.Sell).Sum(t => t.Quantity);
+            return buy - sell;
+        }
+
+        private async Task<decimal> GetCoinQuantityExcludingAsync(Guid walletId, string coinId, Guid excludeId)
+        {
+            var transactions = await _context.Transactions
+                .Where(t => t.WalletId == walletId && t.CoinId == coinId && t.Id != excludeId)
+                .ToListAsync();
+
+            var buy  = transactions.Where(t => t.Type == TransactionType.Buy).Sum(t => t.Quantity);
+            var sell = transactions.Where(t => t.Type == TransactionType.Sell).Sum(t => t.Quantity);
+            return buy - sell;
         }
 
         private static TransactionResponse MapToResponse(Transaction t, string walletName) => new()
         {
-            Id = t.Id,
-            WalletId = t.WalletId,
-            WalletName = walletName,
-            CoinId = t.CoinId,
-            CoinSymbol = t.CoinSymbol,
-            CoinName = t.CoinName,
-            Type = t.Type,
-            Quantity = t.Quantity,
-            PricePerCoin = t.PricePerCoin,
-            TotalAmount = t.TotalAmount,
+            Id              = t.Id,
+            WalletId        = t.WalletId,
+            WalletName      = walletName,
+            CoinId          = t.CoinId,
+            CoinSymbol      = t.CoinSymbol,
+            CoinName        = t.CoinName,
+            Type            = t.Type,
+            Quantity        = t.Quantity,
+            PricePerCoin    = t.PricePerCoin,
+            TotalAmount     = t.TotalAmount,
             TransactionDate = t.TransactionDate,
-            Notes = t.Notes
+            Notes           = t.Notes
         };
     }
 }

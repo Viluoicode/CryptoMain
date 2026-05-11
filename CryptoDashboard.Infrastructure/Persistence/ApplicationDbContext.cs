@@ -18,6 +18,7 @@ namespace CryptoDashboard.Infrastructure.Persistence
         public DbSet<Transaction> Transactions { get; set; } = null!;
         public DbSet<PriceHistory> PriceHistories { get; set; } = null!;
         public DbSet<PortfolioSnapshot> PortfolioSnapshots { get; set; } = null!;
+        public DbSet<WatchlistItem> WatchlistItems { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,16 +39,13 @@ namespace CryptoDashboard.Infrastructure.Persistence
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-                entity.Property(e => e.RowVersion).IsRowVersion();
+                entity.Property(e => e.FiatBalance).HasPrecision(18, 2);
 
                 entity.HasOne(e => e.User)
                       .WithMany(u => u.Wallets)
                       .HasForeignKey(e => e.UserId)
                       .OnDelete(DeleteBehavior.Cascade);
-                // Trong OnModelCreating, phần Wallet
-                entity.Property(e => e.RowVersion)
-                      .IsRowVersion()
-                      .IsConcurrencyToken();
+
                 // ── Index ──
                 entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => new { e.UserId, e.IsDeleted });
@@ -108,6 +106,25 @@ namespace CryptoDashboard.Infrastructure.Persistence
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => new { e.UserId, e.SnapshotDate }).IsUnique();
+            });
+
+            // ─── WatchlistItem ─────────────────────────────────────────────────
+            modelBuilder.Entity<WatchlistItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CoinId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.CoinSymbol).HasMaxLength(20).IsRequired();
+
+                entity.HasOne(e => e.User)
+                      .WithMany(u => u.WatchlistItems)
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Each user can watch a coin only once
+                entity.HasIndex(e => new { e.UserId, e.CoinId }).IsUnique();
+
+                // Soft Delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
             });
         }
 

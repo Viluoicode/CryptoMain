@@ -25,7 +25,7 @@ namespace CryptoDashboard.Application.Validators
 
             RuleFor(x => x.PricePerCoin)
                 .GreaterThan(0).WithMessage("Price per coin must be greater than 0")
-                .PrecisionScale(18, 2, false).WithMessage("Price exceeds allowed precision");
+                .PrecisionScale(18, 8, false).WithMessage("Price exceeds allowed precision (max 8 decimal places)");
 
             RuleFor(x => x.Notes)
                 .MaximumLength(500).WithMessage("Notes must not exceed 500 characters")

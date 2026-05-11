@@ -3,6 +3,7 @@ export interface WalletResponse {
   id: string
   name: string
   userId: string
+  fiatBalance: number
   createdAt: string
   updatedAt: string
 }
@@ -22,11 +23,25 @@ export interface HoldingResponse {
 export interface WalletDetailResponse {
   id: string
   name: string
+  fiatBalance: number
   createdAt: string
   updatedAt: string
   holdings: HoldingResponse[]
   totalValue: number
   transactionCount: number
+}
+
+// ─── Watchlist ────────────────────────────────────────────────────────────────
+export interface WatchlistItemResponse {
+  id: string
+  coinId: string
+  coinSymbol: string
+  createdAt: string
+}
+
+export interface AddWatchlistRequest {
+  coinId: string
+  coinSymbol: string
 }
 
 export interface CreateWalletRequest {
@@ -98,6 +113,12 @@ export interface PortfolioPerformanceResponse {
   unrealizedProfitLossPercentage: number
   totalBuyTransactions: number
   totalSellTransactions: number
+}
+
+// ─── Portfolio History ────────────────────────────────────────────────────────
+export interface PortfolioHistoryPoint {
+  date: string
+  totalValue: number
 }
 
 // ─── Crypto ───────────────────────────────────────────────────────────────────

@@ -14,11 +14,28 @@ import { WalletDetailPage } from '@/pages/WalletDetailPage'
 import { MarketPage } from '@/pages/MarketPage'
 import { CoinDetailPage } from '@/pages/CoinDetailPage'
 import { PortfolioPage } from '@/pages/PortfolioPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { ConvertPage } from '@/pages/ConvertPage'
+import { TransactionsPage } from '@/pages/TransactionsPage'
+import { WatchlistPage } from '@/pages/WatchlistPage'
+import { useWatchlistSync, getLocalStorageWatchlist } from '@/hooks/useWatchlist'
 
 export default function App() {
     const initialize = useAuthStore((s) => s.initialize)
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+    const syncMut = useWatchlistSync()
 
     useEffect(() => { initialize() }, [initialize])
+
+    // Sync localStorage watchlist to DB once after login
+    useEffect(() => {
+        if (!isAuthenticated) return
+        const items = getLocalStorageWatchlist()
+        if (items.length > 0) {
+            syncMut.mutate(items)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated])
 
     return (
         <Routes>
@@ -44,6 +61,10 @@ export default function App() {
                     <Route path="/wallets" element={<WalletsPage />} />
                     <Route path="/wallets/:id" element={<WalletDetailPage />} />
                     <Route path="/portfolio" element={<PortfolioPage />} />
+                    <Route path="/convert" element={<ConvertPage />} />
+                    <Route path="/transactions" element={<TransactionsPage />} />
+                    <Route path="/watchlist" element={<WatchlistPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                 </Route>
             </Route>
 
