@@ -104,6 +104,26 @@ namespace CryptoDashboard.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Nạp tiền ảo vào ví (paper trading)
+        /// </summary>
+        [HttpPost("{id}/deposit")]
+        public async Task<IActionResult> DepositFiat(Guid id, [FromBody] DepositFiatRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var wallet = await _walletService.DepositFiatAsync(id, userId, request);
+                if (wallet == null)
+                    return NotFound(new { message = "Wallet not found or you don't have permission" });
+                return Ok(wallet);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // Helper: Lấy UserId từ JWT token
         private Guid GetCurrentUserId()
         {

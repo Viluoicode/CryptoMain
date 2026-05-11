@@ -16,6 +16,7 @@ namespace CryptoDashboard.Application.Interfaces
         DbSet<Transaction> Transactions { get; }
         DbSet<PriceHistory> PriceHistories { get; }
         DbSet<PortfolioSnapshot> PortfolioSnapshots { get; }
+        DbSet<WatchlistItem> WatchlistItems { get; }
         DatabaseFacade Database { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

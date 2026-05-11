@@ -3,17 +3,21 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
     LayoutDashboard, Wallet, BarChart2, TrendingUp,
-    LogOut, Menu, X, User, Sun, Moon,
+    LogOut, Menu, X, User, Sun, Moon, ArrowLeftRight, Settings, ClipboardList, Star,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/wallets', icon: Wallet, label: 'Wallets' },
-    { to: '/portfolio', icon: BarChart2, label: 'Portfolio' },
-    { to: '/market', icon: TrendingUp, label: 'Market' },
+    { to: '/dashboard', icon: LayoutDashboard,  label: 'Dashboard' },
+    { to: '/wallets',   icon: Wallet,            label: 'Wallets' },
+    { to: '/portfolio', icon: BarChart2,         label: 'Portfolio' },
+    { to: '/market',    icon: TrendingUp,        label: 'Market' },
+    { to: '/convert',       icon: ArrowLeftRight,  label: 'Convert' },
+    { to: '/transactions',  icon: ClipboardList,   label: 'Transactions' },
+    { to: '/watchlist',     icon: Star,            label: 'Watchlist' },
+    { to: '/settings',      icon: Settings,        label: 'Settings' },
 ]
 
 export function AppLayout() {

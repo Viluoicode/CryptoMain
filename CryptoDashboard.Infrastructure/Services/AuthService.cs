@@ -99,6 +99,37 @@ namespace CryptoDashboard.Infrastructure.Services
             };
         }
 
+        public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                throw new UnauthorizedAccessException("User not found");
+
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+                throw new UnauthorizedAccessException("Current password is incorrect");
+
+            if (request.NewPassword.Length < 8)
+                throw new ArgumentException("New password must be at least 8 characters");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            // Invalidate all existing refresh tokens — force re-login on other devices
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = null;
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task RevokeRefreshTokenAsync(Guid userId)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) return;
+
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = null;
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<AuthResponse> RefreshTokenAsync(string refreshToken)
         {
             var tokenHash = TokenHasher.Hash(refreshToken);

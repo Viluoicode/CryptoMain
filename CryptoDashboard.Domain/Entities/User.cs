@@ -17,7 +17,8 @@ namespace CryptoDashboard.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastLoginAt { get; set; }
 
-        // Navigation properties (1 User có nhiều Wallet)
+        // Navigation properties
         public ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
+        public ICollection<WatchlistItem> WatchlistItems { get; set; } = new List<WatchlistItem>();
     }
 }

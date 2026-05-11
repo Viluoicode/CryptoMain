@@ -29,3 +29,8 @@ export async function updateWallet(id: string, body: UpdateWalletRequest): Promi
 export async function deleteWallet(id: string): Promise<void> {
   await apiClient.delete(`/Wallet/${id}`)
 }
+
+export async function depositFiat(id: string, amount: number): Promise<WalletResponse> {
+  const { data } = await apiClient.post<WalletResponse>(`/Wallet/${id}/deposit`, { amount })
+  return data
+}

@@ -18,3 +18,16 @@ export async function refreshTokenApi(refreshToken: string): Promise<AuthRespons
   const { data } = await apiClient.post<AuthResponse>('/auth/refresh', { refreshToken })
   return data
 }
+
+// POST /api/auth/change-password
+export async function changePasswordApi(body: {
+  currentPassword: string
+  newPassword: string
+}): Promise<void> {
+  await apiClient.post('/auth/change-password', body)
+}
+
+// POST /api/auth/logout — revoke refresh token server-side
+export async function logoutApi(): Promise<void> {
+  await apiClient.post('/auth/logout')
+}
