@@ -10,5 +10,7 @@ namespace CryptoDashboard.Application.DTOs.Portfolio
     {
         public DateTime Date { get; set; }
         public decimal TotalValue { get; set; }
+        public decimal TotalInvested { get; set; }
+        public decimal ProfitLoss { get; set; }
     }
 }

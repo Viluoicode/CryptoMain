@@ -126,6 +126,45 @@ namespace CryptoDashboard.Api.Controllers
             return NoContent();
         }
 
+        /// <summary>Export tất cả giao dịch ra file CSV</summary>
+        [HttpGet("export")]
+        public async Task<IActionResult> ExportCsv([FromQuery] TransactionType? type = null)
+        {
+            var userId = GetCurrentUserId();
+            var result = await _transactionService.GetUserTransactionsAsync(
+                userId, page: 1, pageSize: 10_000, type: type);
+
+            var lines = new System.Text.StringBuilder();
+            lines.AppendLine("Date,Type,Coin,Symbol,Quantity,PricePerCoin,TotalAmount,Wallet,Notes");
+
+            foreach (var tx in result.Items)
+            {
+                var line = string.Join(",",
+                    tx.TransactionDate.ToString("yyyy-MM-dd"),
+                    tx.Type == TransactionType.Buy ? "Buy" : "Sell",
+                    EscapeCsv(tx.CoinName),
+                    tx.CoinSymbol.ToUpper(),
+                    tx.Quantity.ToString("F8"),
+                    tx.PricePerCoin.ToString("F8"),
+                    tx.TotalAmount.ToString("F2"),
+                    EscapeCsv(tx.WalletName),
+                    EscapeCsv(tx.Notes ?? "")
+                );
+                lines.AppendLine(line);
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(lines.ToString());
+            var fileName = $"transactions_{DateTime.UtcNow:yyyyMMdd}.csv";
+            return File(bytes, "text/csv", fileName);
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            return value;
+        }
+
         private Guid GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

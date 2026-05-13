@@ -12,6 +12,7 @@ export interface HoldingResponse {
   coinId: string
   coinSymbol: string
   coinName: string
+  image: string
   quantity: number
   averageBuyPrice: number
   currentPrice: number
@@ -87,6 +88,7 @@ export interface PortfolioCoinAllocation {
   coinId: string
   coinSymbol: string
   coinName: string
+  image: string
   quantity: number
   currentPrice: number
   currentValue: number
@@ -119,6 +121,8 @@ export interface PortfolioPerformanceResponse {
 export interface PortfolioHistoryPoint {
   date: string
   totalValue: number
+  totalInvested: number
+  profitLoss: number
 }
 
 // ─── Crypto ───────────────────────────────────────────────────────────────────

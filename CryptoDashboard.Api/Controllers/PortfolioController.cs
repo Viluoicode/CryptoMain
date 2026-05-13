@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CryptoDashboard.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,41 +17,43 @@ namespace CryptoDashboard.Api.Controllers
             _portfolioService = portfolioService;
         }
 
-        /// <summary>
-        /// Lấy tổng quan portfolio (allocations, P&L)
-        /// </summary>
+        /// <summary>Tổng quan portfolio (allocations, P&L)</summary>
         [HttpGet]
         public async Task<IActionResult> GetSummary()
         {
-            var userId = GetCurrentUserId();
-            var result = await _portfolioService.GetPortfolioSummaryAsync(userId);
+            var result = await _portfolioService.GetPortfolioSummaryAsync(GetCurrentUserId());
             return Ok(result);
         }
 
-        /// <summary>
-        /// Lấy hiệu suất portfolio (buy/sell amounts, unrealized P&L)
-        /// </summary>
+        /// <summary>Hiệu suất portfolio (buy/sell amounts, unrealized P&L)</summary>
         [HttpGet("performance")]
         public async Task<IActionResult> GetPerformance()
         {
-            var userId = GetCurrentUserId();
-            var result = await _portfolioService.GetPortfolioPerformanceAsync(userId);
+            var result = await _portfolioService.GetPortfolioPerformanceAsync(GetCurrentUserId());
             return Ok(result);
+        }
+
+        /// <summary>Lịch sử giá trị portfolio theo ngày (từ snapshots DB)</summary>
+        [HttpGet("history")]
+        public async Task<IActionResult> GetHistory([FromQuery] int days = 30)
+        {
+            days = Math.Clamp(days, 7, 365);
+            var result = await _portfolioService.GetPortfolioHistoryAsync(GetCurrentUserId(), days);
+            return Ok(result);
+        }
+
+        /// <summary>Tạo snapshot ngay lập tức cho user hiện tại (dùng để test)</summary>
+        [HttpPost("snapshot")]
+        public async Task<IActionResult> TakeSnapshot()
+        {
+            await _portfolioService.SaveDailySnapshotAsync(GetCurrentUserId());
+            return Ok(new { message = "Snapshot saved" });
         }
 
         private Guid GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return Guid.Parse(userIdClaim!);
-        }
-        [HttpGet("history")]
-        public async Task<IActionResult> GetPortfolioHistory([FromQuery] int days = 30)
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null) return Unauthorized();
-
-            var result = await _portfolioService.GetPortfolioHistoryAsync(userId, days);
-            return Ok(result);
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return Guid.Parse(claim!);
         }
     }
 }
