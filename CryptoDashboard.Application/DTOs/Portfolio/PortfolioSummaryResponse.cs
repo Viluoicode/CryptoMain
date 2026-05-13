@@ -23,6 +23,7 @@ namespace CryptoDashboard.Application.DTOs.Portfolio
         public string CoinId { get; set; } = null!;
         public string CoinSymbol { get; set; } = null!;
         public string CoinName { get; set; } = null!;
+        public string Image { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
         public decimal CurrentPrice { get; set; }
         public decimal CurrentValue { get; set; }

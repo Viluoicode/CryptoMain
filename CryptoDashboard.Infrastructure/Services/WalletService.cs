@@ -187,6 +187,7 @@ namespace CryptoDashboard.Infrastructure.Services
                     CoinId = item.CoinId,
                     CoinSymbol = item.CoinSymbol,
                     CoinName = item.CoinName,
+                    Image = coinData?.Image ?? string.Empty,
                     Quantity = quantity,
                     AverageBuyPrice = avgBuyPrice,
                     CurrentPrice = currentPrice,

@@ -135,6 +135,9 @@ builder.Services.AddSingleton<ICryptoPriceCache, MemoryCryptoPriceCache>();
 // Background price refresh
 builder.Services.AddHostedService<CryptoPriceRefreshService>();
 
+// Daily portfolio snapshot (runs at midnight UTC)
+builder.Services.AddHostedService<PortfolioSnapshotBackgroundService>();
+
 // Crypto Service with Polly Resilience Policies
 builder.Services.AddHttpClient<ICryptoService, CryptoService>(client =>
 {
