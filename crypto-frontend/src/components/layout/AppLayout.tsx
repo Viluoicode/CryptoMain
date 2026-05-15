@@ -1,13 +1,14 @@
 // src/components/layout/AppLayout.tsx
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
     LayoutDashboard, Wallet, BarChart2, TrendingUp,
     LogOut, Menu, X, User, ArrowLeftRight, Settings,
-    ClipboardList, Star,
+    ClipboardList, Star, Bell, CandlestickChart,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
+import { GlobalMarketBar } from '@/components/GlobalMarketBar'
 import { useBinanceWs } from '@/hooks/useBinanceWs'
 import { useLivePriceStore } from '@/store/livePriceStore'
 
@@ -76,14 +77,19 @@ const NAV_ITEMS = [
     { to: '/market',        icon: TrendingUp,      label: 'Market' },
     { to: '/convert',       icon: ArrowLeftRight,  label: 'Convert' },
     { to: '/transactions',  icon: ClipboardList,   label: 'Transactions' },
-    { to: '/watchlist',     icon: Star,            label: 'Watchlist' },
-    { to: '/settings',      icon: Settings,        label: 'Settings' },
+    { to: '/watchlist',     icon: Star,              label: 'Watchlist' },
+    { to: '/alerts',        icon: Bell,              label: 'Price Alerts' },
+    { to: '/trade',         icon: CandlestickChart,  label: 'Terminal' },
+    { to: '/settings',      icon: Settings,          label: 'Settings' },
 ]
 
 export function AppLayout() {
     const { user, logout } = useAuth()
     const navigate = useNavigate()
+    const location = useLocation()
     const [sidebarOpen, setSidebarOpen] = useState(false)
+
+    const isTerminal = location.pathname === '/trade'
 
     // Force dark mode always
     useEffect(() => {
@@ -195,8 +201,16 @@ export function AppLayout() {
                     </div>
                 </header>
 
+                {/* Global market stats bar — compact, always visible */}
+                {!isTerminal && <GlobalMarketBar />}
+
                 {/* Page content */}
-                <main className="flex-1 overflow-y-auto px-6 py-6 bg-gray-950">
+                <main className={cn(
+                    'flex-1 bg-gray-950',
+                    isTerminal
+                        ? 'overflow-hidden flex flex-col'
+                        : 'overflow-y-auto px-6 py-6',
+                )}>
                     <Outlet />
                 </main>
             </div>

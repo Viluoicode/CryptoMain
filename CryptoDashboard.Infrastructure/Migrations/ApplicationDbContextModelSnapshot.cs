@@ -56,6 +56,49 @@ namespace CryptoDashboard.Infrastructure.Migrations
                     b.ToTable("PortfolioSnapshots");
                 });
 
+            modelBuilder.Entity("CryptoDashboard.Domain.Entities.PriceAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CoinId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CoinName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CoinSymbol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TargetPrice")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "CoinId");
+
+                    b.ToTable("PriceAlerts");
+                });
+
             modelBuilder.Entity("CryptoDashboard.Domain.Entities.PriceHistory", b =>
                 {
                     b.Property<long>("Id")
@@ -281,6 +324,17 @@ namespace CryptoDashboard.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("CryptoDashboard.Domain.Entities.PortfolioSnapshot", b =>
+                {
+                    b.HasOne("CryptoDashboard.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CryptoDashboard.Domain.Entities.PriceAlert", b =>
                 {
                     b.HasOne("CryptoDashboard.Domain.Entities.User", "User")
                         .WithMany()

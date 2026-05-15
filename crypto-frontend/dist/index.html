@@ -1,21 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Crypto Dashboard</title>
+
+    <!-- ── Primary meta ──────────────────────────────────────────────────── -->
+    <title>CryptoDash — Theo dõi danh mục Crypto</title>
+    <meta name="description" content="CryptoDash là ứng dụng theo dõi danh mục đầu tư tiền mã hoá. Xem giá realtime từ Binance, quản lý ví, giao dịch và phân tích kỹ thuật ngay trong trình duyệt." />
+    <meta name="keywords" content="crypto, bitcoin, portfolio tracker, danh mục đầu tư, tiền mã hoá, binance, coingecko" />
+    <meta name="author" content="CryptoDash" />
+
+    <!-- ── Open Graph / Social preview ──────────────────────────────────── -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="CryptoDash — Theo dõi danh mục Crypto" />
+    <meta property="og:description" content="Theo dõi giá coin realtime, quản lý ví, giao dịch và phân tích kỹ thuật chuyên nghiệp." />
+    <meta property="og:locale"      content="vi_VN" />
+
+    <!-- ── Theme colour (matches app bg) ────────────────────────────────── -->
+    <meta name="theme-color" content="#030712" />
+
+    <!-- ── Favicon (inline SVG data URI — no extra file needed) ─────────── -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/></svg>" />
+
+    <!-- ── Dark mode bootstrap (runs before React mounts) ───────────────── -->
     <script>
-        (function () {
-            const theme = localStorage.getItem('theme') ?? 'dark'
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark')
-            }
+        ;(function () {
+            // App is dark-only — always add the class immediately so there's
+            // no flash of unstyled light background during hydration.
+            document.documentElement.classList.add('dark')
+            localStorage.setItem('theme', 'dark')
         })()
     </script>
-  <script type="module" crossorigin src="/assets/index-BO5RHKsk.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CSRpi3Ld.css">
+  <script type="module" crossorigin src="/assets/index-Oza_j_iV.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-eGsMli7V.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-react-BetRJvyZ.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-router-3ZQQ4KNu.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-query-7SlnLUM7.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-yNuN2PHQ.css">
 </head>
-  <body>
+<body>
     <div id="root"></div>
-  </body>
+</body>
 </html>

@@ -110,6 +110,48 @@ namespace CryptoDashboard.Infrastructure.Services
             return MapToResponse(wallet);
         }
 
+        public async Task TransferAsync(Guid userId, TransferWalletRequest request)
+        {
+            if (request.FromWalletId == request.ToWalletId)
+                throw new ArgumentException("Cannot transfer to the same wallet.");
+
+            if (request.Amount <= 0)
+                throw new ArgumentException("Transfer amount must be greater than 0.");
+
+            await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var fromWallet = await _context.Wallets
+                    .FirstOrDefaultAsync(w => w.Id == request.FromWalletId && w.UserId == userId);
+
+                if (fromWallet == null)
+                    throw new InvalidOperationException("Source wallet not found or access denied.");
+
+                var toWallet = await _context.Wallets
+                    .FirstOrDefaultAsync(w => w.Id == request.ToWalletId && w.UserId == userId);
+
+                if (toWallet == null)
+                    throw new InvalidOperationException("Destination wallet not found or access denied.");
+
+                if (fromWallet.FiatBalance < request.Amount)
+                    throw new InvalidOperationException("Insufficient balance in source wallet.");
+
+                fromWallet.FiatBalance -= request.Amount;
+                fromWallet.UpdatedAt = DateTime.UtcNow;
+
+                toWallet.FiatBalance += request.Amount;
+                toWallet.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+            }
+            catch
+            {
+                await dbTransaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task<bool> DeleteWalletAsync(Guid walletId, Guid userId)
         {
             await using var dbTransaction = await _context.Database.BeginTransactionAsync();

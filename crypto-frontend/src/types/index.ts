@@ -53,6 +53,12 @@ export interface UpdateWalletRequest {
   name: string
 }
 
+export interface TransferWalletRequest {
+  fromWalletId: string
+  toWalletId: string
+  amount: number
+}
+
 // ─── Transaction ─────────────────────────────────────────────────────────────
 // type: 1 = Buy, 2 = Sell  (C# enum TransactionType)
 export type TransactionType = 1 | 2
@@ -123,6 +129,29 @@ export interface PortfolioHistoryPoint {
   totalValue: number
   totalInvested: number
   profitLoss: number
+}
+
+// ─── Price Alert ──────────────────────────────────────────────────────────────
+// direction: 1 = Above (price >= target), 2 = Below (price <= target)
+export type AlertDirection = 1 | 2
+
+export interface PriceAlertResponse {
+  id: string
+  coinId: string
+  coinSymbol: string
+  coinName: string
+  targetPrice: number
+  direction: AlertDirection
+  directionDisplay: string
+  createdAt: string
+}
+
+export interface CreatePriceAlertRequest {
+  coinId: string
+  coinSymbol: string
+  coinName: string
+  targetPrice: number
+  direction: AlertDirection
 }
 
 // ─── Crypto ───────────────────────────────────────────────────────────────────

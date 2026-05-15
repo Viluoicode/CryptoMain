@@ -38,6 +38,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IPortfolioService, PortfolioService>();
 builder.Services.AddScoped<IWatchlistService, WatchlistService>();
+builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
 
 // CryptoApi Options
 var cryptoApiSection = builder.Configuration.GetSection(CryptoApiOptions.SectionName);

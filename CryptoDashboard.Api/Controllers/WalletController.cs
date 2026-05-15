@@ -105,6 +105,28 @@ namespace CryptoDashboard.Api.Controllers
         }
 
         /// <summary>
+        /// Chuyển tiền giữa 2 ví (cùng user)
+        /// </summary>
+        [HttpPost("transfer")]
+        public async Task<IActionResult> Transfer([FromBody] TransferWalletRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                await _walletService.TransferAsync(userId, request);
+                return Ok(new { message = "Transfer completed successfully" });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Nạp tiền ảo vào ví (paper trading)
         /// </summary>
         [HttpPost("{id}/deposit")]

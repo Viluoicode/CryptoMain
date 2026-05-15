@@ -130,6 +130,28 @@ namespace CryptoDashboard.Infrastructure.Services
             await _context.SaveChangesAsync();
         }
 
+        public async Task<UpdateProfileResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                throw new UnauthorizedAccessException("User not found");
+
+            // Check username uniqueness (exclude current user)
+            var taken = await _context.Users
+                .AnyAsync(u => u.Username == request.Username && u.Id != userId);
+            if (taken)
+                throw new InvalidOperationException("Username already taken");
+
+            user.Username = request.Username;
+            await _context.SaveChangesAsync();
+
+            return new UpdateProfileResponse
+            {
+                Username = user.Username,
+                Email = user.Email
+            };
+        }
+
         public async Task<AuthResponse> RefreshTokenAsync(string refreshToken)
         {
             var tokenHash = TokenHasher.Hash(refreshToken);
