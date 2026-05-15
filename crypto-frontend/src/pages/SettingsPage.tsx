@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { User, Lock, Bell, Shield, ChevronRight, Check, Eye, EyeOff, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/ui/Toast'
-import { changePasswordApi } from '@/api/auth'
+import { changePasswordApi, updateProfileApi } from '@/api/auth'
+import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -21,16 +22,32 @@ const SECTIONS: { id: Section; label: string; icon: React.ReactNode; desc: strin
 // ─── Sub-sections ─────────────────────────────────────────────────────────────
 
 function ProfileSection({ username, email }: { username: string; email: string }) {
-    const [name, setName]         = useState(username)
-    const [saved, setSaved]       = useState(false)
-    const [loading, setLoading]   = useState(false)
+    const [name, setName]       = useState(username)
+    const [saved, setSaved]     = useState(false)
+    const [loading, setLoading] = useState(false)
+    const [error, setError]     = useState('')
+    const toast                  = useToast()
+    const updateUsername         = useAuthStore((s) => s.updateUsername)
 
     async function handleSave() {
+        if (!name.trim()) return
+        setError('')
         setLoading(true)
-        await new Promise((r) => setTimeout(r, 800)) // simulate API
-        setLoading(false)
-        setSaved(true)
-        setTimeout(() => setSaved(false), 2500)
+        try {
+            await updateProfileApi({ username: name.trim() })
+            updateUsername(name.trim())
+            setSaved(true)
+            toast.success('Đã lưu', 'Tên người dùng đã được cập nhật')
+            setTimeout(() => setSaved(false), 2500)
+        } catch (err: unknown) {
+            const msg =
+                (err as { response?: { data?: { message?: string } } })?.response?.data
+                    ?.message ?? 'Cập nhật thất bại'
+            setError(msg)
+            toast.error(msg)
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -76,6 +93,7 @@ function ProfileSection({ username, email }: { username: string; email: string }
 
             <div className="flex items-center gap-3">
                 <SaveButton loading={loading} saved={saved} onClick={handleSave} />
+                {error && <p className="text-xs text-red-500">{error}</p>}
             </div>
         </div>
     )

@@ -79,6 +79,28 @@ namespace CryptoDashboard.Api.Controllers
             }
         }
 
+        /// <summary>Update display name (username)</summary>
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userId = Guid.Parse(userIdClaim!);
+                var result = await _authService.UpdateProfileAsync(userId, request);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
         /// <summary>Logout — revoke refresh token server-side</summary>
         [HttpPost("logout")]
         [Authorize]

@@ -13,6 +13,7 @@ import { getPortfolioSummary, getPortfolioPerformance, getPortfolioHistory } fro
 import { formatUSD, formatPct } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { PortfolioCoinAllocation } from '@/types'
+import { useLivePriceStore } from '@/store/livePriceStore'
 
 // ─── Day range options ─────────────────────────────────────────────────────────
 const DAY_OPTIONS = [
@@ -199,6 +200,7 @@ function CoinAvatar({ image, symbol, size = 8 }: { image: string; symbol: string
 
 // ─── Holdings Table ────────────────────────────────────────────────────────────
 function HoldingsTable({ allocations }: { allocations: PortfolioCoinAllocation[] }) {
+    const { ticks, connected } = useLivePriceStore()
     const sorted = [...allocations].sort((a, b) => b.currentValue - a.currentValue)
 
     if (!sorted.length) return (
@@ -227,10 +229,14 @@ function HoldingsTable({ allocations }: { allocations: PortfolioCoinAllocation[]
                 </thead>
                 <tbody className="divide-y divide-gray-800/60">
                     {sorted.map((coin) => {
-                        const pnl     = coin.currentValue - coin.investedValue
-                        const pnlPct  = coin.investedValue > 0 ? (pnl / coin.investedValue) * 100 : 0
-                        const avgBuy  = coin.quantity > 0 ? coin.investedValue / coin.quantity : 0
-                        const pos     = pnl >= 0
+                        // Prefer live Binance price over stale CoinGecko price
+                        const liveTick    = ticks[coin.coinSymbol.toLowerCase()]
+                        const livePrice   = liveTick?.price ?? coin.currentPrice
+                        const liveValue   = livePrice * coin.quantity
+                        const pnl         = liveValue - coin.investedValue
+                        const pnlPct      = coin.investedValue > 0 ? (pnl / coin.investedValue) * 100 : 0
+                        const avgBuy      = coin.quantity > 0 ? coin.investedValue / coin.quantity : 0
+                        const pos         = pnl >= 0
 
                         return (
                             <tr
@@ -258,14 +264,19 @@ function HoldingsTable({ allocations }: { allocations: PortfolioCoinAllocation[]
                                     {avgBuy > 0 ? formatUSD(avgBuy) : '—'}
                                 </td>
 
-                                {/* Current price */}
+                                {/* Current price — live if available */}
                                 <td className="py-4 text-right font-mono text-gray-200 text-xs">
-                                    {formatUSD(coin.currentPrice)}
+                                    <span className={liveTick ? 'text-white' : 'text-gray-400'}>
+                                        {formatUSD(livePrice)}
+                                    </span>
+                                    {liveTick && connected && (
+                                        <span className="ml-1 text-emerald-500 text-[9px]">●</span>
+                                    )}
                                 </td>
 
-                                {/* Value */}
+                                {/* Value — recomputed with live price */}
                                 <td className="py-4 text-right font-mono font-semibold text-white">
-                                    {formatUSD(coin.currentValue)}
+                                    {formatUSD(liveValue)}
                                 </td>
 
                                 {/* P&L */}

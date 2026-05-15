@@ -14,5 +14,6 @@ namespace CryptoDashboard.Application.Interfaces
         Task<AuthResponse> RefreshTokenAsync(string refreshToken);
         Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
         Task RevokeRefreshTokenAsync(Guid userId);
+        Task<UpdateProfileResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request);
     }
 }

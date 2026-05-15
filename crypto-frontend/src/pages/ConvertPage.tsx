@@ -250,8 +250,8 @@ export function ConvertPage() {
                     {rate !== null && fromCoin && toCoin && (
                         <div className="space-y-2.5 p-3.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-sm">
                             <RateRow label="Tỷ giá" value={`1 ${fromCoin.symbol.toUpperCase()} = ${rate.toFixed(6)} ${toCoin.symbol.toUpperCase()}`} />
-                            <RateRow label="Giá {fromCoin.symbol.toUpperCase()}" value={formatUSD(fromCoin.currentPrice)} />
-                            <RateRow label="Giá {toCoin.symbol.toUpperCase()}" value={formatUSD(toCoin.currentPrice)} />
+                            <RateRow label={`Giá ${fromCoin.symbol.toUpperCase()}`} value={formatUSD(fromCoin.currentPrice)} />
+                            <RateRow label={`Giá ${toCoin.symbol.toUpperCase()}`} value={formatUSD(toCoin.currentPrice)} />
                             <div className="flex gap-3 pt-1">
                                 <span className={cn(
                                     'flex items-center gap-1 text-xs font-medium',

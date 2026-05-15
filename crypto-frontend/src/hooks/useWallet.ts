@@ -1,7 +1,7 @@
 // src/hooks/useWallet.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getWallets, getWalletById, createWallet, updateWallet, deleteWallet, depositFiat } from '@/api/wallet'
-import type { CreateWalletRequest, UpdateWalletRequest } from '@/types'
+import { getWallets, getWalletById, createWallet, updateWallet, deleteWallet, depositFiat, transferFunds } from '@/api/wallet'
+import type { CreateWalletRequest, UpdateWalletRequest, TransferWalletRequest } from '@/types'
 
 export const walletKeys = {
     all: ['wallets'] as const,
@@ -55,5 +55,13 @@ export function useDepositFiat(walletId: string) {
             qc.invalidateQueries({ queryKey: walletKeys.all })
             qc.invalidateQueries({ queryKey: walletKeys.detail(walletId) })
         },
+    })
+}
+
+export function useTransferWallet() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: (req: TransferWalletRequest) => transferFunds(req),
+        onSuccess: () => qc.invalidateQueries({ queryKey: walletKeys.all }),
     })
 }

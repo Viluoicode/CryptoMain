@@ -4,6 +4,7 @@ import type {
   WalletDetailResponse,
   CreateWalletRequest,
   UpdateWalletRequest,
+  TransferWalletRequest,
 } from '@/types'
 
 export async function getWallets(): Promise<WalletResponse[]> {
@@ -33,4 +34,8 @@ export async function deleteWallet(id: string): Promise<void> {
 export async function depositFiat(id: string, amount: number): Promise<WalletResponse> {
   const { data } = await apiClient.post<WalletResponse>(`/Wallet/${id}/deposit`, { amount })
   return data
+}
+
+export async function transferFunds(body: TransferWalletRequest): Promise<void> {
+  await apiClient.post('/Wallet/transfer', body)
 }

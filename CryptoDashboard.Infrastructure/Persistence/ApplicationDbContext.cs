@@ -19,6 +19,7 @@ namespace CryptoDashboard.Infrastructure.Persistence
         public DbSet<PriceHistory> PriceHistories { get; set; } = null!;
         public DbSet<PortfolioSnapshot> PortfolioSnapshots { get; set; } = null!;
         public DbSet<WatchlistItem> WatchlistItems { get; set; } = null!;
+        public DbSet<PriceAlert> PriceAlerts { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -125,6 +126,24 @@ namespace CryptoDashboard.Infrastructure.Persistence
 
                 // Soft Delete filter
                 entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            // ─── PriceAlert (hard delete — no soft delete) ─────────────────────
+            modelBuilder.Entity<PriceAlert>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CoinId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.CoinSymbol).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.CoinName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.TargetPrice).HasPrecision(18, 8);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => new { e.UserId, e.CoinId });
             });
         }
 

@@ -16,6 +16,7 @@ import { getAllTransactionsPaged } from '@/api/transaction'
 import { formatUSD, formatPct, formatDate } from '@/lib/format'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
+import { FearGreedWidget } from '@/components/FearGreedWidget'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 type DayRange = 7 | 30 | 90 | 365
@@ -291,7 +292,7 @@ export function DashboardPage() {
             <PortfolioChart />
 
             {/* ── Bottom grid ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Allocation */}
                 <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
@@ -346,6 +347,9 @@ export function DashboardPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Fear & Greed */}
+                <FearGreedWidget />
 
                 {/* Recent Transactions */}
                 <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
