@@ -5,6 +5,7 @@ import {
     LayoutDashboard, Wallet, BarChart2, TrendingUp,
     LogOut, Menu, X, User, ArrowLeftRight, Settings,
     ClipboardList, Star, Bell, CandlestickChart,
+    Layers, Trophy, Link,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -80,6 +81,9 @@ const NAV_ITEMS = [
     { to: '/watchlist',     icon: Star,              label: 'Watchlist' },
     { to: '/alerts',        icon: Bell,              label: 'Price Alerts' },
     { to: '/trade',         icon: CandlestickChart,  label: 'Terminal' },
+    { to: '/orders',        icon: Layers,            label: 'Orders & Positions' },
+    { to: '/onchain',       icon: Link,              label: 'On-Chain' },
+    { to: '/leaderboard',   icon: Trophy,            label: 'Leaderboard' },
     { to: '/settings',      icon: Settings,          label: 'Settings' },
 ]
 

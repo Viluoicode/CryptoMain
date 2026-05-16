@@ -37,3 +37,6 @@ VITE_API_URL=https://localhost:7103   # in .env.local
 - `BOLL` indicator goes on `candle_pane`, not a separate pane
 - KLineChart `init()` returns `Nullable<Chart>` — always null-check before use
 - Dark-only app: `dark` class always on `<html>`, never togglable
+- Binance WS trade ID: use `data.t` (`number`) as React key — never `data.T` (timestamp, causes duplicates)
+- `useMetaMask` uses raw `window.ethereum` — no wagmi/web3modal dependency
+- `html-to-image` installed for PNG export in LeaderboardPage

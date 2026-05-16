@@ -154,6 +154,118 @@ export interface CreatePriceAlertRequest {
   direction: AlertDirection
 }
 
+// ─── Orders (Stop-loss / Take-profit / Limit) ────────────────────────────────
+export type OrderSide = 1 | 2       // 1=Buy, 2=Sell
+export type OrderType = 1 | 2 | 3  // 1=StopLoss, 2=TakeProfit, 3=Limit
+export type OrderStatus = 1 | 2 | 3 | 4 // 1=Pending, 2=Filled, 3=Cancelled, 4=Failed
+
+export interface OrderResponse {
+  id: string
+  walletId: string
+  walletName: string
+  coinId: string
+  coinSymbol: string
+  coinName: string
+  side: OrderSide
+  type: OrderType
+  triggerPrice: number
+  quantity: number
+  status: OrderStatus
+  createdAt: string
+  filledAt: string | null
+  cancelledAt: string | null
+  filledPrice: number | null
+  failureReason: string | null
+  transactionId: string | null
+}
+
+export interface CreateOrderRequest {
+  walletId: string
+  coinId: string
+  side: OrderSide
+  type: OrderType
+  triggerPrice: number
+  quantity: number
+}
+
+// ─── Positions (Margin Trading) ───────────────────────────────────────────────
+export type PositionSide = 1 | 2   // 1=Long, 2=Short
+export type PositionStatus = 1 | 2 | 3 // 1=Open, 2=Closed, 3=Liquidated
+
+export interface PositionResponse {
+  id: string
+  walletId: string
+  walletName: string
+  coinId: string
+  coinSymbol: string
+  coinName: string
+  side: PositionSide
+  entryPrice: number
+  quantity: number
+  leverage: number
+  collateralAmount: number
+  liquidationPrice: number
+  status: PositionStatus
+  exitPrice: number | null
+  realizedPnL: number | null
+  closeReason: string | null
+  openedAt: string
+  closedAt: string | null
+  // Live computed (open positions)
+  currentPrice: number | null
+  unrealizedPnL: number | null
+  unrealizedPnLPercentage: number | null
+  marginRatio: number | null
+}
+
+export interface OpenPositionRequest {
+  walletId: string
+  coinId: string
+  side: PositionSide
+  quantity: number
+  leverage: number
+}
+
+// ─── On-Chain Wallets ─────────────────────────────────────────────────────────
+export interface TokenBalance {
+  symbol: string
+  name: string
+  contractAddress: string
+  balance: number
+  decimals: number
+}
+
+export interface OnChainWalletResponse {
+  id: string
+  address: string
+  label: string
+  chain: string
+  nativeBalance: number
+  nativeSymbol: string
+  tokens: TokenBalance[]
+  createdAt: string
+  lastSyncedAt: string | null
+}
+
+export interface AddOnChainWalletRequest {
+  address: string
+  label: string
+  chain: string
+}
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+export type LeaderboardPeriod = 1 | 2 | 3 // 1=Week, 2=Month, 3=AllTime
+
+export interface LeaderboardEntry {
+  rank: number
+  userId: string
+  username: string
+  profitLossPercentage: number
+  currentValue: number
+  startValue: number
+  transactionCount: number
+}
+
 // ─── Crypto ───────────────────────────────────────────────────────────────────
 export interface CryptoListResponse {
   id: string

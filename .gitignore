@@ -5,6 +5,11 @@
 .env
 .env.local
 .env.production
+.env.docker
+
+# Logs
+**/logs/
+*.log
 
 # appsettings production
 appsettings.Production.json

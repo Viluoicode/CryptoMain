@@ -1,6 +1,7 @@
 ﻿using CryptoDashboard.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 
 namespace CryptoDashboard.Api.Controllers
@@ -8,6 +9,7 @@ namespace CryptoDashboard.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [EnableRateLimiting("crypto")]
     public class CryptoController : ControllerBase
     {
         private readonly ICryptoService _cryptoService;
