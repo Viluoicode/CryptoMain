@@ -14,5 +14,6 @@ namespace CryptoDashboard.Application.Interfaces
         Task<List<PortfolioHistoryPoint>> GetPortfolioHistoryAsync(Guid userId, int days = 30);
         Task SaveDailySnapshotAsync(Guid userId);
         Task SaveSnapshotsForAllUsersAsync();
+        Task<List<LeaderboardEntry>> GetLeaderboardAsync(LeaderboardPeriod period, int top = 50);
     }
 }

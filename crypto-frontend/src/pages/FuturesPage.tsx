@@ -65,7 +65,7 @@ interface DepthMsg {
     asks: [string, string][]
 }
 
-interface TradeMsg { e: string; T: number; p: string; q: string; m: boolean }
+interface TradeMsg { e: string; t: number; T: number; p: string; q: string; m: boolean }
 
 interface Tick24h {
     price: number; open: number; high: number; low: number
@@ -751,17 +751,39 @@ function RecentTrades({ symbol }: { symbol: string }) {
     const [trades, setTrades] = useState<RecentTrade[]>([])
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+    // Clear stale trades immediately when pair changes
+    useEffect(() => {
+        bufferRef.current = []
+        setTrades([])
+    }, [symbol])
+
     useBinanceStream<TradeMsg>(`${symbol.toLowerCase()}@trade`, (data) => {
-        const trade: RecentTrade = {
-            id: data.T, price: parseFloat(data.p), qty: parseFloat(data.q),
-            isSell: data.m, time: data.T,
+        const price = parseFloat(data.p)
+        const qty   = parseFloat(data.q)
+        // Discard malformed messages
+        if (!data.t || isNaN(price) || isNaN(qty) || price <= 0 || qty <= 0) return
+        // Robust dedup: scan whole buffer (≤60 items, O(n) trivial).
+        // Catches network duplicates and any case where the same trade ID arrives twice.
+        for (let i = 0; i < bufferRef.current.length; i++) {
+            if (bufferRef.current[i].id === data.t) return
         }
+        const trade: RecentTrade = { id: data.t, price, qty, isSell: data.m, time: data.T }
         bufferRef.current = [trade, ...bufferRef.current].slice(0, 60)
     })
 
     useEffect(() => {
         timerRef.current = setInterval(() => {
-            if (bufferRef.current.length > 0) setTrades([...bufferRef.current].slice(0, 40))
+            if (bufferRef.current.length === 0) return
+            // Defensive: dedup again when committing to state so React never sees duplicate keys
+            const seen = new Set<number>()
+            const unique: RecentTrade[] = []
+            for (const t of bufferRef.current) {
+                if (seen.has(t.id)) continue
+                seen.add(t.id)
+                unique.push(t)
+                if (unique.length >= 40) break
+            }
+            setTrades(unique)
         }, 300)
         return () => { if (timerRef.current) clearInterval(timerRef.current) }
     }, [])
@@ -787,7 +809,9 @@ function RecentTrades({ symbol }: { symbol: string }) {
 }
 
 function TradeRow({ trade, symbol }: { trade: RecentTrade; symbol: string }) {
-    const time = new Date(trade.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    const time = trade.time > 0
+        ? new Date(trade.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : '—'
     return (
         <div className={cn('grid grid-cols-3 px-3 py-[3px] text-[11px] font-mono hover:bg-gray-800/30 transition-colors')}>
             <span className={trade.isSell ? 'text-red-400' : 'text-emerald-400'}>{fmtPrice(trade.price, symbol)}</span>

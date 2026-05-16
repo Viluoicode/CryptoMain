@@ -1,0 +1,60 @@
+# Local production-like stack — postgres + api + frontend
+# Usage:
+#   cp .env.docker.example .env.docker
+#   docker compose --env-file .env.docker up --build
+# Frontend: http://localhost:5173    API: http://localhost:8080
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cryptodash}
+      POSTGRES_USER: ${POSTGRES_USER:-cryptodash}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cryptodash}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: CryptoDashboard.Api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__MyConnect: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cryptodash};Username=${POSTGRES_USER:-cryptodash};Password=${POSTGRES_PASSWORD:-changeme}"
+      Jwt__SecretKey: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required (>= 32 chars)}
+      Jwt__Issuer: CryptoPortfolio
+      Jwt__Audience: CryptoPortfolioUsers
+      Alchemy__ApiKey: ${ALCHEMY_API_KEY:-}
+      CryptoApi__ApiKey: ${COINGECKO_API_KEY:-}
+    ports:
+      - "8080:8080"
+    volumes:
+      - apilogs:/app/logs
+
+  frontend:
+    build:
+      context: ./crypto-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata:
+  apilogs:

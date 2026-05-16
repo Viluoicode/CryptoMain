@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using CryptoDashboard.Application.DTOs.Portfolio;
 using CryptoDashboard.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace CryptoDashboard.Api.Controllers
 {
@@ -48,6 +50,19 @@ namespace CryptoDashboard.Api.Controllers
         {
             await _portfolioService.SaveDailySnapshotAsync(GetCurrentUserId());
             return Ok(new { message = "Snapshot saved" });
+        }
+
+        /// <summary>Bảng xếp hạng người dùng theo P&L%</summary>
+        [HttpGet("leaderboard")]
+        [AllowAnonymous]
+        [EnableRateLimiting("leaderboard")]
+        public async Task<IActionResult> GetLeaderboard(
+            [FromQuery] LeaderboardPeriod period = LeaderboardPeriod.Week,
+            [FromQuery] int top = 50)
+        {
+            top = Math.Clamp(top, 1, 100);
+            var result = await _portfolioService.GetLeaderboardAsync(period, top);
+            return Ok(result);
         }
 
         private Guid GetCurrentUserId()

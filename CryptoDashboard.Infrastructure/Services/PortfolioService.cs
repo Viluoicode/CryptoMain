@@ -213,6 +213,67 @@ namespace CryptoDashboard.Infrastructure.Services
             }
         }
 
+        // ── Leaderboard ───────────────────────────────────────────────────────
+        public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(LeaderboardPeriod period, int top = 50)
+        {
+            var today = DateTime.UtcNow.Date;
+            var startDate = period switch
+            {
+                LeaderboardPeriod.Week  => today.AddDays(-7),
+                LeaderboardPeriod.Month => today.AddDays(-30),
+                _                       => DateTime.MinValue,
+            };
+
+            // Get earliest and latest snapshot in window per user
+            var snapshots = await _context.PortfolioSnapshots
+                .Where(s => s.SnapshotDate >= startDate)
+                .ToListAsync();
+
+            if (!snapshots.Any()) return new();
+
+            var grouped = snapshots
+                .GroupBy(s => s.UserId)
+                .Select(g => new
+                {
+                    UserId     = g.Key,
+                    StartValue = g.OrderBy(s => s.SnapshotDate).First().TotalValue,
+                    EndValue   = g.OrderByDescending(s => s.SnapshotDate).First().TotalValue,
+                    TxCount    = 0,
+                })
+                .Where(x => x.StartValue > 0)
+                .ToList();
+
+            var userIds = grouped.Select(g => g.UserId).ToList();
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.Username })
+                .ToDictionaryAsync(u => u.Id, u => u.Username);
+
+            // Transaction counts per user in period
+            var txCounts = await _context.Transactions
+                .Where(t => t.TransactionDate >= startDate && userIds.Contains(t.Wallet.UserId))
+                .GroupBy(t => t.Wallet.UserId)
+                .Select(g => new { UserId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.UserId, x => x.Count);
+
+            var entries = grouped
+                .Select(g => new LeaderboardEntry
+                {
+                    UserId = g.UserId,
+                    Username = users.TryGetValue(g.UserId, out var name) ? name : "Unknown",
+                    StartValue = g.StartValue,
+                    CurrentValue = g.EndValue,
+                    ProfitLossPercentage = (g.EndValue - g.StartValue) / g.StartValue * 100m,
+                    TransactionCount = txCounts.TryGetValue(g.UserId, out var cnt) ? cnt : 0,
+                })
+                .OrderByDescending(e => e.ProfitLossPercentage)
+                .Take(top)
+                .Select((e, i) => { e.Rank = i + 1; return e; })
+                .ToList();
+
+            return entries;
+        }
+
         // ── Snapshot: save for all active users ───────────────────────────────
         public async Task SaveSnapshotsForAllUsersAsync()
         {

@@ -28,8 +28,11 @@ const ConvertPage       = lazy(() => import('@/pages/ConvertPage').then(m => ({ 
 const TransactionsPage  = lazy(() => import('@/pages/TransactionsPage').then(m => ({ default: m.TransactionsPage })))
 const WatchlistPage     = lazy(() => import('@/pages/WatchlistPage').then(m => ({ default: m.WatchlistPage })))
 const PriceAlertsPage   = lazy(() => import('@/pages/PriceAlertsPage').then(m => ({ default: m.PriceAlertsPage })))
-const FuturesPage       = lazy(() => import('@/pages/FuturesPage').then(m => ({ default: m.FuturesPage })))
-const NotFoundPage      = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
+const FuturesPage        = lazy(() => import('@/pages/FuturesPage').then(m => ({ default: m.FuturesPage })))
+const FuturesOrdersPage  = lazy(() => import('@/pages/FuturesOrdersPage').then(m => ({ default: m.FuturesOrdersPage })))
+const OnChainPage        = lazy(() => import('@/pages/OnChainPage').then(m => ({ default: m.OnChainPage })))
+const LeaderboardPage    = lazy(() => import('@/pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })))
+const NotFoundPage       = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })))
 
 // ─── Page loading fallback ────────────────────────────────────────────────────
 function PageSkeleton() {
@@ -95,6 +98,9 @@ export default function App() {
                             <Route path="/watchlist"    element={<WatchlistPage />} />
                             <Route path="/alerts"       element={<PriceAlertsPage />} />
                             <Route path="/trade"        element={<FuturesPage />} />
+                            <Route path="/orders"       element={<FuturesOrdersPage />} />
+                            <Route path="/onchain"      element={<OnChainPage />} />
+                            <Route path="/leaderboard"  element={<LeaderboardPage />} />
                             <Route path="/settings"     element={<SettingsPage />} />
                         </Route>
                     </Route>
