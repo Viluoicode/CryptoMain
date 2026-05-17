@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { queryClient } from '@/main'
 import { tokenStorage } from '@/api/client'
-import { loginApi, registerApi } from '@/api/auth'
+import { loginApi, registerApi, logoutApi } from '@/api/auth'
 import type { AuthUser, LoginRequest, RegisterRequest } from '@/types/auth'
 
 interface AuthStore {
@@ -16,6 +16,7 @@ interface AuthStore {
   register: (body: RegisterRequest) => Promise<void>
   logout: () => void
   clearError: () => void
+  updateUsername: (username: string) => void
 
   /** Gọi khi app khởi động để rehydrate từ localStorage */
   initialize: () => void
@@ -92,13 +93,21 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   logout() {
-      tokenStorage.clear()
-      queryClient.clear()
+    // Fire-and-forget: revoke server-side refresh token
+    logoutApi().catch(() => { /* ignore — we're logging out anyway */ })
+    tokenStorage.clear()
+    queryClient.clear()
     set({ user: null, isAuthenticated: false, error: null })
   },
 
   clearError() {
     set({ error: null })
+  },
+
+  updateUsername(username) {
+    set((state) => ({
+      user: state.user ? { ...state.user, username } : null,
+    }))
   },
 }))
 

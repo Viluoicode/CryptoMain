@@ -14,5 +14,7 @@ namespace CryptoDashboard.Application.Interfaces
         Task<WalletDetailResponse?> GetWalletByIdAsync(Guid walletId, Guid userId);
         Task<WalletResponse?> UpdateWalletAsync(Guid walletId, Guid userId, UpdateWalletRequest request);
         Task<bool> DeleteWalletAsync(Guid walletId, Guid userId);
+        Task<WalletResponse?> DepositFiatAsync(Guid walletId, Guid userId, DepositFiatRequest request);
+        Task TransferAsync(Guid userId, TransferWalletRequest request);
     }
 }

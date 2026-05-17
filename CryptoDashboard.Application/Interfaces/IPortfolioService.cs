@@ -11,6 +11,9 @@ namespace CryptoDashboard.Application.Interfaces
     {
         Task<PortfolioSummaryResponse> GetPortfolioSummaryAsync(Guid userId);
         Task<PortfolioPerformanceResponse> GetPortfolioPerformanceAsync(Guid userId);
-        Task<List<PortfolioHistoryPoint>> GetPortfolioHistoryAsync(string userId, int days = 30);
+        Task<List<PortfolioHistoryPoint>> GetPortfolioHistoryAsync(Guid userId, int days = 30);
+        Task SaveDailySnapshotAsync(Guid userId);
+        Task SaveSnapshotsForAllUsersAsync();
+        Task<List<LeaderboardEntry>> GetLeaderboardAsync(LeaderboardPeriod period, int top = 50);
     }
 }

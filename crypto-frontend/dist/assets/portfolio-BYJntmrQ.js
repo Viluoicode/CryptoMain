@@ -1,0 +1,1 @@
+import{k as o}from"./index-DQW-AySO.js";async function n(){const{data:t}=await o.get("/Portfolio");return t}async function i(){const{data:t}=await o.get("/Portfolio/performance");return t}async function e(t=30){const{data:a}=await o.get("/Portfolio/history",{params:{days:t}});return a}export{n as a,i as b,e as g};

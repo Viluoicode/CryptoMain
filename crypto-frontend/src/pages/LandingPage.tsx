@@ -2,11 +2,13 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { TrendingUp, TrendingDown, BarChart2, Shield, Zap, ArrowRight, Menu, X } from 'lucide-react'
+import { TrendingUp, TrendingDown, BarChart2, Shield, Zap, ArrowRight, Menu, X, Users, DollarSign, Layers } from 'lucide-react'
 import { getTopCryptos } from '@/api/crypto'
 import { formatUSD, formatPct } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
+import { useBinanceWs } from '@/hooks/useBinanceWs'
+import { useLivePriceStore } from '@/store/livePriceStore'
 
 // ─── Header ────────────────────────────────────────────────────────────────────
 function Header() {
@@ -31,7 +33,7 @@ function Header() {
             <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2.5">
-                    <div className="bg-brand-600 rounded-lg p-1.5">
+                    <div className="bg-indigo-600 rounded-lg p-1.5">
                         <TrendingUp className="h-5 w-5 text-white" />
                     </div>
                     <span className="text-white text-lg font-bold tracking-tight">CryptoDash</span>
@@ -48,7 +50,7 @@ function Header() {
                     {isAuthenticated ? (
                         <button
                             onClick={() => navigate('/dashboard')}
-                            className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition"
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition"
                         >
                             Dashboard <ArrowRight size={14} />
                         </button>
@@ -59,7 +61,7 @@ function Header() {
                             </Link>
                             <Link
                                 to="/register"
-                                className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition"
+                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition"
                             >
                                 Bắt đầu miễn phí
                             </Link>
@@ -81,7 +83,7 @@ function Header() {
                 <div className="md:hidden bg-gray-950 border-t border-gray-800 px-6 py-4 space-y-3">
                     <Link to="/market" className="block text-sm text-gray-400 hover:text-white transition py-2">Thị trường</Link>
                     <Link to="/login" className="block text-sm text-gray-400 hover:text-white transition py-2">Đăng nhập</Link>
-                    <Link to="/register" className="block px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-xl text-center">
+                    <Link to="/register" className="block px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl text-center">
                         Bắt đầu miễn phí
                     </Link>
                 </div>
@@ -91,6 +93,8 @@ function Header() {
 }
 
 // ─── Ticker ────────────────────────────────────────────────────────────────────
+const TOP10_SYMBOLS = ['btc', 'eth', 'bnb', 'sol', 'xrp', 'ada', 'avax', 'doge', 'dot', 'link']
+
 function MarketTicker() {
     const { data: coins } = useQuery({
         queryKey: ['crypto', 'top', 10],
@@ -98,27 +102,34 @@ function MarketTicker() {
         staleTime: 1000 * 60 * 2,
     })
 
+    // Connect WebSocket for top 10 — gives the ticker live prices
+    useBinanceWs(TOP10_SYMBOLS)
+    const { ticks } = useLivePriceStore()
+
     if (!coins?.length) return null
 
-    // Duplicate for seamless loop
+    // Duplicate for seamless CSS loop
     const items = [...coins, ...coins]
 
     return (
         <div className="border-y border-gray-800 bg-gray-950/50 overflow-hidden py-3">
             <div className="flex animate-ticker gap-8 w-max">
-                {items.map((coin, i) => (
-                    <div key={`${coin.id}-${i}`} className="flex items-center gap-2 shrink-0">
-                        <img src={coin.image} alt={coin.name} className="w-5 h-5 rounded-full" />
-                        <span className="text-xs font-semibold text-gray-300 uppercase">{coin.symbol}</span>
-                        <span className="text-xs text-white font-mono">{formatUSD(coin.currentPrice)}</span>
-                        <span className={cn(
-                            'text-xs font-medium',
-                            coin.priceChangePercentage24h >= 0 ? 'text-emerald-400' : 'text-red-400'
-                        )}>
-                            {formatPct(coin.priceChangePercentage24h)}
-                        </span>
-                    </div>
-                ))}
+                {items.map((coin, i) => {
+                    const live   = ticks[coin.symbol.toLowerCase()]
+                    const price  = live?.price    ?? coin.currentPrice
+                    const pct    = live?.change24h ?? coin.priceChangePercentage24h
+                    const isUp   = pct >= 0
+                    return (
+                        <div key={`${coin.id}-${i}`} className="flex items-center gap-2 shrink-0">
+                            <img src={coin.image} alt={coin.name} className="w-5 h-5 rounded-full" />
+                            <span className="text-xs font-semibold text-gray-300 uppercase">{coin.symbol}</span>
+                            <span className="text-xs text-white font-mono">{formatUSD(price)}</span>
+                            <span className={cn('text-xs font-medium', isUp ? 'text-emerald-400' : 'text-red-400')}>
+                                {formatPct(pct)}
+                            </span>
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )
@@ -132,15 +143,23 @@ function Hero() {
         staleTime: 1000 * 60 * 2,
     })
 
+    // Read live prices from store (populated by MarketTicker's WS above)
+    const { ticks } = useLivePriceStore()
+
     const btc = coins?.find(c => c.id === 'bitcoin')
     const eth = coins?.find(c => c.id === 'ethereum')
+
+    const btcPrice  = ticks['btc']?.price    ?? btc?.currentPrice
+    const btcChange = ticks['btc']?.change24h ?? btc?.priceChangePercentage24h ?? 0
+    const ethPrice  = ticks['eth']?.price    ?? eth?.currentPrice
+    const ethChange = ticks['eth']?.change24h ?? eth?.priceChangePercentage24h ?? 0
 
     return (
         <section className="relative min-h-screen flex flex-col justify-center pt-20 pb-16 px-6 overflow-hidden">
             {/* Background effects */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-600/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-800/10 rounded-full blur-3xl" />
                 <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_60%,#030712_100%)]" />
             </div>
 
@@ -148,14 +167,14 @@ function Hero() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     {/* Left */}
                     <div>
-                        <div className="inline-flex items-center gap-2 bg-brand-600/10 border border-brand-600/20 rounded-full px-4 py-1.5 mb-6">
+                        <div className="inline-flex items-center gap-2 bg-indigo-600/10 border border-indigo-600/20 rounded-full px-4 py-1.5 mb-6">
                             <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                            <span className="text-xs text-brand-400 font-medium">Live market data</span>
+                            <span className="text-xs text-indigo-400 font-medium">Live market data</span>
                         </div>
 
                         <h1 className="text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
                             Theo dõi crypto
-                            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-indigo-400">
+                            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
                                 thông minh hơn
                             </span>
                         </h1>
@@ -164,10 +183,11 @@ function Hero() {
                             Quản lý danh mục đầu tư crypto, theo dõi P&L real-time, và phân tích thị trường — tất cả trong một nơi.
                         </p>
 
-                        <div className="flex flex-wrap gap-3">
+                        {/* CTA buttons */}
+                        <div className="flex flex-wrap gap-3 mb-6">
                             <Link
                                 to="/register"
-                                className="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition"
+                                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition"
                             >
                                 Bắt đầu miễn phí <ArrowRight size={16} />
                             </Link>
@@ -177,6 +197,24 @@ function Hero() {
                             >
                                 Xem thị trường
                             </Link>
+                        </div>
+
+                        {/* Stats bar */}
+                        <div className="flex flex-wrap items-center gap-5 pt-2">
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Users size={14} className="text-indigo-500" />
+                                <span><span className="text-gray-300 font-semibold">10,000+</span> users</span>
+                            </div>
+                            <div className="w-px h-4 bg-gray-800" />
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <DollarSign size={14} className="text-emerald-500" />
+                                <span><span className="text-gray-300 font-semibold">$50M+</span> tracked</span>
+                            </div>
+                            <div className="w-px h-4 bg-gray-800" />
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Layers size={14} className="text-amber-500" />
+                                <span><span className="text-gray-300 font-semibold">100+</span> coins</span>
+                            </div>
                         </div>
                     </div>
 
@@ -195,15 +233,17 @@ function Hero() {
                                     </div>
                                     <span className={cn(
                                         'flex items-center gap-1 text-sm font-semibold px-2.5 py-1 rounded-full',
-                                        btc.priceChangePercentage24h >= 0
-                                            ? 'bg-emerald-900/40 text-emerald-400'
-                                            : 'bg-red-900/40 text-red-400'
+                                        btcChange >= 0
+                                            ? 'bg-emerald-500/10 text-emerald-400'
+                                            : 'bg-red-500/10 text-red-400'
                                     )}>
-                                        {btc.priceChangePercentage24h >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-                                        {formatPct(btc.priceChangePercentage24h)}
+                                        {btcChange >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+                                        {formatPct(btcChange)}
                                     </span>
                                 </div>
-                                <p className="text-3xl font-bold text-white font-mono">{formatUSD(btc.currentPrice)}</p>
+                                <p className="text-3xl font-bold text-white font-mono">
+                                    {btcPrice ? formatUSD(btcPrice) : '—'}
+                                </p>
                             </div>
                         )}
 
@@ -220,15 +260,17 @@ function Hero() {
                                     </div>
                                     <span className={cn(
                                         'flex items-center gap-1 text-sm font-semibold px-2.5 py-1 rounded-full',
-                                        eth.priceChangePercentage24h >= 0
-                                            ? 'bg-emerald-900/40 text-emerald-400'
-                                            : 'bg-red-900/40 text-red-400'
+                                        ethChange >= 0
+                                            ? 'bg-emerald-500/10 text-emerald-400'
+                                            : 'bg-red-500/10 text-red-400'
                                     )}>
-                                        {eth.priceChangePercentage24h >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-                                        {formatPct(eth.priceChangePercentage24h)}
+                                        {ethChange >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+                                        {formatPct(ethChange)}
                                     </span>
                                 </div>
-                                <p className="text-3xl font-bold text-white font-mono">{formatUSD(eth.currentPrice)}</p>
+                                <p className="text-3xl font-bold text-white font-mono">
+                                    {ethPrice ? formatUSD(ethPrice) : '—'}
+                                </p>
                             </div>
                         )}
 
@@ -240,7 +282,7 @@ function Hero() {
                                         <img src={coin.image} alt={coin.name} className="w-6 h-6 rounded-full" />
                                         <span className="text-xs font-medium text-gray-400 uppercase">{coin.symbol}</span>
                                     </div>
-                                    <p className="text-sm font-bold text-white">{formatUSD(coin.currentPrice)}</p>
+                                    <p className="text-sm font-bold text-white font-mono">{formatUSD(coin.currentPrice)}</p>
                                     <p className={cn(
                                         'text-xs font-medium mt-0.5',
                                         coin.priceChangePercentage24h >= 0 ? 'text-emerald-400' : 'text-red-400'
@@ -272,9 +314,9 @@ function TopCoinsSection() {
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h2 className="text-2xl font-bold text-white mb-1">Top thị trường</h2>
-                        <p className="text-gray-400 text-sm">Giá cập nhật real-time từ CoinGecko</p>
+                        <p className="text-gray-500 text-sm">Giá cập nhật real-time từ CoinGecko</p>
                     </div>
-                    <Link to="/market" className="flex items-center gap-1.5 text-sm text-brand-400 hover:text-brand-300 transition font-medium">
+                    <Link to="/market" className="flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 transition font-medium">
                         Xem tất cả <ArrowRight size={14} />
                     </Link>
                 </div>
@@ -299,22 +341,22 @@ function TopCoinsSection() {
                                     onClick={() => navigate(`/market/${coin.id}`)}
                                     className="flex items-center gap-4 px-6 py-4 hover:bg-gray-800/50 transition cursor-pointer group"
                                 >
-                                    <span className="text-xs text-gray-600 w-5">{index + 1}</span>
+                                    <span className="text-xs text-gray-600 w-5 font-mono">{index + 1}</span>
                                     <img src={coin.image} alt={coin.name} className="w-8 h-8 rounded-full" />
                                     <div className="flex-1">
                                         <span className="font-semibold text-white text-sm">{coin.name}</span>
-                                        <span className="text-gray-500 uppercase text-xs ml-2">{coin.symbol}</span>
+                                        <span className="text-gray-600 uppercase text-xs ml-2">{coin.symbol}</span>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-white text-sm">{formatUSD(coin.currentPrice)}</p>
+                                        <p className="font-semibold text-white text-sm font-mono">{formatUSD(coin.currentPrice)}</p>
                                         <p className={cn(
-                                            'text-xs font-medium',
+                                            'text-xs font-medium font-mono',
                                             coin.priceChangePercentage24h >= 0 ? 'text-emerald-400' : 'text-red-400'
                                         )}>
                                             {formatPct(coin.priceChangePercentage24h)}
                                         </p>
                                     </div>
-                                    <ArrowRight size={14} className="text-gray-600 group-hover:text-gray-400 transition ml-2" />
+                                    <ArrowRight size={14} className="text-gray-700 group-hover:text-gray-400 transition ml-2" />
                                 </div>
                             ))}
                         </div>
@@ -329,7 +371,7 @@ function TopCoinsSection() {
 function FeaturesSection() {
     const features = [
         {
-            icon: <BarChart2 size={22} className="text-brand-400" />,
+            icon: <BarChart2 size={22} className="text-indigo-400" />,
             title: 'Portfolio real-time',
             desc: 'Theo dõi tổng giá trị, P&L và phân bổ danh mục theo thời gian thực.',
         },
@@ -355,7 +397,7 @@ function FeaturesSection() {
             <div className="max-w-7xl mx-auto">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold text-white mb-3">Tính năng nổi bật</h2>
-                    <p className="text-gray-400 max-w-md mx-auto">
+                    <p className="text-gray-500 max-w-md mx-auto">
                         Mọi thứ bạn cần để theo dõi và quản lý danh mục crypto hiệu quả.
                     </p>
                 </div>
@@ -364,13 +406,13 @@ function FeaturesSection() {
                     {features.map((f, i) => (
                         <div
                             key={i}
-                            className="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-gray-700 transition group"
+                            className="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-indigo-500/30 transition group"
                         >
                             <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                 {f.icon}
                             </div>
                             <h3 className="font-semibold text-white mb-2">{f.title}</h3>
-                            <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
+                            <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
                         </div>
                     ))}
                 </div>
@@ -384,9 +426,9 @@ function CTASection() {
     return (
         <section className="py-24 px-6">
             <div className="max-w-2xl mx-auto text-center">
-                <div className="relative bg-gradient-to-br from-brand-600/20 to-indigo-600/20 border border-brand-600/30 rounded-3xl px-8 py-16 overflow-hidden">
+                <div className="relative bg-gradient-to-br from-indigo-600/20 to-violet-600/20 border border-indigo-600/30 rounded-3xl px-8 py-16 overflow-hidden">
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-brand-600/10 rounded-full blur-3xl" />
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl" />
                     </div>
                     <div className="relative">
                         <h2 className="text-3xl font-bold text-white mb-3">
@@ -398,7 +440,7 @@ function CTASection() {
                         <div className="flex flex-wrap gap-3 justify-center">
                             <Link
                                 to="/register"
-                                className="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition"
+                                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition"
                             >
                                 Tạo tài khoản miễn phí <ArrowRight size={16} />
                             </Link>
@@ -422,12 +464,12 @@ function Footer() {
         <footer className="border-t border-gray-800 px-6 py-8">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="bg-brand-600 rounded-lg p-1">
+                    <div className="bg-indigo-600 rounded-lg p-1">
                         <TrendingUp className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-gray-400 text-sm font-medium">CryptoDash</span>
+                    <span className="text-gray-500 text-sm font-medium">CryptoDash</span>
                 </div>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-700">
                     Dữ liệu từ CoinGecko API · Chỉ dành cho mục đích học tập
                 </p>
             </div>

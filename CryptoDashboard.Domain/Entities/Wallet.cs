@@ -13,14 +13,11 @@ namespace CryptoDashboard.Domain.Entities
         public string Name { get; set; } = string.Empty;
         public Guid UserId { get; set; }
 
+        /// <summary>Virtual USD balance — starts at $10,000, decreases on Buy, increases on Sell.</summary>
+        public decimal FiatBalance { get; set; } = 10_000m;
+
         // Navigation properties
         public User User { get; set; } = null!;
-  /*      public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;*/
-
-        [System.ComponentModel.DataAnnotations.Timestamp]
-        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
-
         public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }

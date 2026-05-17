@@ -10,6 +10,7 @@ namespace CryptoDashboard.Application.DTOs.Wallet
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public decimal FiatBalance { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
@@ -26,6 +27,7 @@ namespace CryptoDashboard.Application.DTOs.Wallet
         public string CoinId { get; set; } = string.Empty;
         public string CoinSymbol { get; set; } = string.Empty;
         public string CoinName { get; set; } = string.Empty;
+        public string Image { get; set; } = string.Empty;
         public decimal Quantity { get; set; } // Tổng số coin đang nắm giữ
         public decimal AverageBuyPrice { get; set; } // Giá mua trung bình
         public decimal CurrentPrice { get; set; } // Giá thị trường hiện tại

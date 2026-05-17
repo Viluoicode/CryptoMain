@@ -1,0 +1,69 @@
+# Render.com blueprint — one-click deploy of the full CryptoDash stack.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Steps:
+#   1. Push this repo to GitHub.
+#   2. On Render dashboard: "New +" → "Blueprint" → connect this repo.
+#   3. Render reads this file and provisions everything.
+#   4. After first deploy, set ALCHEMY_API_KEY in the API service env vars
+#      (optional — only if you want on-chain wallet balances).
+
+databases:
+  - name: cryptodash-db
+    plan: free                       # free Postgres for 30 days, then $7/mo
+    databaseName: cryptodash
+    user: cryptodash
+
+services:
+  # ─── Backend API ────────────────────────────────────────────────────────────
+  - type: web
+    name: cryptodash-api
+    runtime: docker
+    plan: free                       # free 512MB, sleeps after 15 min idle
+    region: singapore                # closest to Vietnam
+    dockerfilePath: ./CryptoDashboard.Api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health/live
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: RunMigrationsOnStartup
+        value: "true"
+      - key: ConnectionStrings__MyConnect
+        fromDatabase:
+          name: cryptodash-db
+          property: connectionString
+      - key: Jwt__SecretKey
+        generateValue: true          # Render generates a strong random secret
+      - key: Jwt__Issuer
+        value: CryptoPortfolio
+      - key: Jwt__Audience
+        value: CryptoPortfolioUsers
+      - key: Cors__AllowedOrigins__0
+        fromService:
+          type: web
+          name: cryptodash-frontend
+          property: host
+      - key: Alchemy__ApiKey
+        sync: false                  # set manually in dashboard if desired
+      - key: CryptoApi__ApiKey
+        sync: false
+
+  # ─── Frontend (static site via nginx) ───────────────────────────────────────
+  - type: web
+    name: cryptodash-frontend
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./crypto-frontend/Dockerfile
+    dockerContext: ./crypto-frontend
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: cryptodash-api
+          property: host

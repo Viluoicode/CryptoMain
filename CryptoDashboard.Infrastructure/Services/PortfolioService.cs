@@ -1,28 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using CryptoDashboard.Application.DTOs.Crypto;
 using CryptoDashboard.Application.DTOs.Portfolio;
 using CryptoDashboard.Application.Interfaces;
 using CryptoDashboard.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CryptoDashboard.Infrastructure.Services
 {
-
     public class PortfolioService : IPortfolioService
     {
         private readonly IApplicationDbContext _context;
         private readonly ICryptoService _cryptoService;
+        private readonly ILogger<PortfolioService> _logger;
 
-
-        public PortfolioService(IApplicationDbContext context, ICryptoService cryptoService)
+        public PortfolioService(
+            IApplicationDbContext context,
+            ICryptoService cryptoService,
+            ILogger<PortfolioService> logger)
         {
             _context = context;
             _cryptoService = cryptoService;
+            _logger = logger;
         }
+
+        // ── Summary ───────────────────────────────────────────────────────────
         public async Task<PortfolioSummaryResponse> GetPortfolioSummaryAsync(Guid userId)
         {
             var wallets = await _context.Wallets
@@ -32,86 +33,66 @@ namespace CryptoDashboard.Infrastructure.Services
 
             var allTransactions = wallets.SelectMany(w => w.Transactions).ToList();
 
-            // Group theo coin
             var grouped = allTransactions
                 .GroupBy(t => new { t.CoinId, t.CoinSymbol, t.CoinName })
                 .Select(g => new
                 {
-                    g.Key.CoinId,
-                    g.Key.CoinSymbol,
-                    g.Key.CoinName,
-                    BuyQty = g.Where(x => x.Type == TransactionType.Buy).Sum(x => x.Quantity),
-                    SellQty = g.Where(x => x.Type == TransactionType.Sell).Sum(x => x.Quantity),
+                    g.Key.CoinId, g.Key.CoinSymbol, g.Key.CoinName,
+                    BuyQty    = g.Where(x => x.Type == TransactionType.Buy).Sum(x => x.Quantity),
+                    SellQty   = g.Where(x => x.Type == TransactionType.Sell).Sum(x => x.Quantity),
                     BuyAmount = g.Where(x => x.Type == TransactionType.Buy).Sum(x => x.TotalAmount),
-                    SellAmount = g.Where(x => x.Type == TransactionType.Sell).Sum(x => x.TotalAmount)
+                    SellAmount= g.Where(x => x.Type == TransactionType.Sell).Sum(x => x.TotalAmount)
                 })
                 .Where(x => x.BuyQty > x.SellQty)
                 .ToList();
 
-            // Batch fetch all coin prices in a single API call (fixes N+1 problem)
             var coinIds = grouped.Select(g => g.CoinId).Distinct().ToList();
             Dictionary<string, CryptoListResponse> coinDataMap;
-            try
-            {
-                coinDataMap = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds);
-            }
-            catch
-            {
-                // Fallback: empty map — prices will default to 0
-                coinDataMap = new Dictionary<string, CryptoListResponse>();
-            }
+            try { coinDataMap = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds); }
+            catch { coinDataMap = new(); }
 
             var allocations = new List<PortfolioCoinAllocationResponse>();
-
             foreach (var coin in grouped)
             {
                 var qty = coin.BuyQty - coin.SellQty;
                 coinDataMap.TryGetValue(coin.CoinId, out var coinData);
                 var currentPrice = coinData?.CurrentPrice ?? 0m;
-                var currentValue = qty * currentPrice;
-
-                var investedValue = coin.BuyAmount - coin.SellAmount;
-
                 allocations.Add(new PortfolioCoinAllocationResponse
                 {
-                    CoinId = coin.CoinId,
-                    CoinSymbol = coin.CoinSymbol,
-                    CoinName = coin.CoinName,
-                    Quantity = qty,
+                    CoinId       = coin.CoinId,
+                    CoinSymbol   = coin.CoinSymbol,
+                    CoinName     = coin.CoinName,
+                    Image        = coinData?.Image ?? string.Empty,
+                    Quantity     = qty,
                     CurrentPrice = currentPrice,
-                    CurrentValue = currentValue,
-                    InvestedValue = investedValue
+                    CurrentValue = qty * currentPrice,
+                    InvestedValue= coin.BuyAmount - coin.SellAmount
                 });
             }
 
             var totalCurrentValue = allocations.Sum(a => a.CurrentValue);
             foreach (var a in allocations)
-            {
                 a.AllocationPercentage = totalCurrentValue > 0
-                    ? (a.CurrentValue / totalCurrentValue) * 100m
-                    : 0m;
-            }
+                    ? (a.CurrentValue / totalCurrentValue) * 100m : 0m;
 
-            var totalBuy = allTransactions.Where(t => t.Type == TransactionType.Buy).Sum(t => t.TotalAmount);
-            var totalSell = allTransactions.Where(t => t.Type == TransactionType.Sell).Sum(t => t.TotalAmount);
-            var netInvested = totalBuy - totalSell;
-            var totalProfitLoss = totalCurrentValue - netInvested;
-            var totalProfitLossPercentage = netInvested > 0
-                ? (totalProfitLoss / netInvested) * 100m
-                : 0m;
+            var totalBuy   = allTransactions.Where(t => t.Type == TransactionType.Buy).Sum(t => t.TotalAmount);
+            var totalSell  = allTransactions.Where(t => t.Type == TransactionType.Sell).Sum(t => t.TotalAmount);
+            var netInvested= totalBuy - totalSell;
+            var profitLoss = totalCurrentValue - netInvested;
 
             return new PortfolioSummaryResponse
             {
-                WalletCount = wallets.Count,
-                TotalTransactionCount = allTransactions.Count,
-                TotalCurrentValue = totalCurrentValue,
-                TotalInvestedValue = netInvested,
-                TotalProfitLoss = totalProfitLoss,
-                TotalProfitLossPercentage = totalProfitLossPercentage,
-                Allocations = allocations.OrderByDescending(a => a.CurrentValue).ToList()
+                WalletCount              = wallets.Count,
+                TotalTransactionCount    = allTransactions.Count,
+                TotalCurrentValue        = totalCurrentValue,
+                TotalInvestedValue       = netInvested,
+                TotalProfitLoss          = profitLoss,
+                TotalProfitLossPercentage= netInvested > 0 ? (profitLoss / netInvested) * 100m : 0m,
+                Allocations              = allocations.OrderByDescending(a => a.CurrentValue).ToList()
             };
         }
 
+        // ── Performance ───────────────────────────────────────────────────────
         public async Task<PortfolioPerformanceResponse> GetPortfolioPerformanceAsync(Guid userId)
         {
             var wallets = await _context.Wallets
@@ -120,74 +101,197 @@ namespace CryptoDashboard.Infrastructure.Services
                 .ToListAsync();
 
             var allTransactions = wallets.SelectMany(w => w.Transactions).ToList();
-
-            var totalBuy = allTransactions.Where(t => t.Type == TransactionType.Buy).Sum(t => t.TotalAmount);
+            var totalBuy  = allTransactions.Where(t => t.Type == TransactionType.Buy).Sum(t => t.TotalAmount);
             var totalSell = allTransactions.Where(t => t.Type == TransactionType.Sell).Sum(t => t.TotalAmount);
             var netInvested = totalBuy - totalSell;
 
-            // dùng summary để tái sử dụng logic current value
             var summary = await GetPortfolioSummaryAsync(userId);
             var currentValue = summary.TotalCurrentValue;
-            var unrealized = currentValue - netInvested;
-            var unrealizedPct = netInvested > 0 ? (unrealized / netInvested) * 100m : 0m;
+            var unrealized   = currentValue - netInvested;
 
             return new PortfolioPerformanceResponse
             {
-                TotalBuyAmount = totalBuy,
-                TotalSellAmount = totalSell,
-                NetInvested = netInvested,
-                CurrentPortfolioValue = currentValue,
-                UnrealizedProfitLoss = unrealized,
-                UnrealizedProfitLossPercentage = unrealizedPct,
-                TotalBuyTransactions = allTransactions.Count(t => t.Type == TransactionType.Buy),
-                TotalSellTransactions = allTransactions.Count(t => t.Type == TransactionType.Sell)
+                TotalBuyAmount                 = totalBuy,
+                TotalSellAmount                = totalSell,
+                NetInvested                    = netInvested,
+                CurrentPortfolioValue          = currentValue,
+                UnrealizedProfitLoss           = unrealized,
+                UnrealizedProfitLossPercentage = netInvested > 0 ? (unrealized / netInvested) * 100m : 0m,
+                TotalBuyTransactions           = allTransactions.Count(t => t.Type == TransactionType.Buy),
+                TotalSellTransactions          = allTransactions.Count(t => t.Type == TransactionType.Sell)
             };
         }
-        public async Task<List<PortfolioHistoryPoint>> GetPortfolioHistoryAsync(string userId, int days = 30)
+
+        // ── History (from DB snapshots) ────────────────────────────────────────
+        public async Task<List<PortfolioHistoryPoint>> GetPortfolioHistoryAsync(Guid userId, int days = 30)
         {
-            // Lấy tất cả transactions của user (đã có sẵn)
-            var transactions = await _context.Transactions
-                .Include(t => t.Wallet)
-                .Where(t => t.Wallet.UserId == Guid.Parse(userId))
-                .OrderBy(t => t.TransactionDate)
+            var today     = DateTime.UtcNow.Date;
+            var startDate = today.AddDays(-(days - 1));
+
+            // Pull snapshots from DB
+            var snapshots = await _context.PortfolioSnapshots
+                .Where(s => s.UserId == userId && s.SnapshotDate >= startDate)
+                .OrderBy(s => s.SnapshotDate)
                 .ToListAsync();
 
-            if (!transactions.Any()) return new List<PortfolioHistoryPoint>();
-
-            // Lấy tất cả coinIds đang hold
-            var coinIds = transactions.Select(t => t.CoinId).Distinct().ToList();
-
-            // Lấy giá hiện tại từ CryptoService
-            var prices = await _cryptoService.GetCryptocurrenciesByIdsAsync(coinIds);
-
-            var result = new List<PortfolioHistoryPoint>();
-            var today = DateTime.UtcNow.Date;
-            var startDate = today.AddDays(-days);
-
-            for (var date = startDate; date <= today; date = date.AddDays(1))
+            // Always include today's live value
+            var summary = await GetPortfolioSummaryAsync(userId);
+            var todayPoint = new PortfolioHistoryPoint
             {
-                // Tính holdings tại ngày đó (dựa vào transactions đã xảy ra)
-                decimal totalValue = 0;
-                foreach (var coinId in coinIds)
+                Date          = today,
+                TotalValue    = summary.TotalCurrentValue,
+                TotalInvested = summary.TotalInvestedValue,
+                ProfitLoss    = summary.TotalProfitLoss
+            };
+
+            // If no historical snapshots yet — return just today
+            if (!snapshots.Any())
+                return new List<PortfolioHistoryPoint> { todayPoint };
+
+            // Build a full series, forward-filling gaps between snapshots
+            var snapshotMap = snapshots.ToDictionary(s => s.SnapshotDate);
+            var result      = new List<PortfolioHistoryPoint>();
+            decimal lastValue    = snapshots.First().TotalValue;
+            decimal lastInvested = snapshots.First().TotalInvested;
+            decimal lastPnl      = snapshots.First().ProfitLoss;
+
+            for (var date = startDate; date < today; date = date.AddDays(1))
+            {
+                if (snapshotMap.TryGetValue(date, out var snap))
                 {
-                    var txUpToDate = transactions
-                        .Where(t => t.CoinId == coinId && t.TransactionDate.Date <= date)
-                        .ToList();
-
-                    var qty = txUpToDate.Sum(t => t.Type == TransactionType.Buy
-                        ? t.Quantity
-                        : -t.Quantity);
-
-                    if (qty <= 0) continue;
-
-                    var price = prices.TryGetValue(coinId, out var p) ? p.CurrentPrice : 0;
-                    totalValue += qty * price;
+                    lastValue    = snap.TotalValue;
+                    lastInvested = snap.TotalInvested;
+                    lastPnl      = snap.ProfitLoss;
                 }
-
-                result.Add(new PortfolioHistoryPoint { Date = date, TotalValue = totalValue });
+                result.Add(new PortfolioHistoryPoint
+                {
+                    Date          = date,
+                    TotalValue    = lastValue,
+                    TotalInvested = lastInvested,
+                    ProfitLoss    = lastPnl
+                });
             }
 
+            // Replace or add today with live value
+            result.Add(todayPoint);
             return result;
+        }
+
+        // ── Snapshot: save for one user ────────────────────────────────────────
+        public async Task SaveDailySnapshotAsync(Guid userId)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            // Idempotent — skip if already saved today
+            var alreadyExists = await _context.PortfolioSnapshots
+                .AnyAsync(s => s.UserId == userId && s.SnapshotDate == today);
+            if (alreadyExists) return;
+
+            // Skip users with no transactions
+            var hasTransactions = await _context.Transactions
+                .AnyAsync(t => t.Wallet.UserId == userId);
+            if (!hasTransactions) return;
+
+            try
+            {
+                var summary = await GetPortfolioSummaryAsync(userId);
+                var snapshot = new PortfolioSnapshot
+                {
+                    UserId       = userId,
+                    TotalValue   = summary.TotalCurrentValue,
+                    TotalInvested= summary.TotalInvestedValue,
+                    ProfitLoss   = summary.TotalProfitLoss,
+                    SnapshotDate = today
+                };
+
+                _context.PortfolioSnapshots.Add(snapshot);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save portfolio snapshot for user {UserId}", userId);
+            }
+        }
+
+        // ── Leaderboard ───────────────────────────────────────────────────────
+        public async Task<List<LeaderboardEntry>> GetLeaderboardAsync(LeaderboardPeriod period, int top = 50)
+        {
+            var today = DateTime.UtcNow.Date;
+            var startDate = period switch
+            {
+                LeaderboardPeriod.Week  => today.AddDays(-7),
+                LeaderboardPeriod.Month => today.AddDays(-30),
+                _                       => DateTime.MinValue,
+            };
+
+            // Get earliest and latest snapshot in window per user
+            var snapshots = await _context.PortfolioSnapshots
+                .Where(s => s.SnapshotDate >= startDate)
+                .ToListAsync();
+
+            if (!snapshots.Any()) return new();
+
+            var grouped = snapshots
+                .GroupBy(s => s.UserId)
+                .Select(g => new
+                {
+                    UserId     = g.Key,
+                    StartValue = g.OrderBy(s => s.SnapshotDate).First().TotalValue,
+                    EndValue   = g.OrderByDescending(s => s.SnapshotDate).First().TotalValue,
+                    TxCount    = 0,
+                })
+                .Where(x => x.StartValue > 0)
+                .ToList();
+
+            var userIds = grouped.Select(g => g.UserId).ToList();
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.Username })
+                .ToDictionaryAsync(u => u.Id, u => u.Username);
+
+            // Transaction counts per user in period
+            var txCounts = await _context.Transactions
+                .Where(t => t.TransactionDate >= startDate && userIds.Contains(t.Wallet.UserId))
+                .GroupBy(t => t.Wallet.UserId)
+                .Select(g => new { UserId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.UserId, x => x.Count);
+
+            var entries = grouped
+                .Select(g => new LeaderboardEntry
+                {
+                    UserId = g.UserId,
+                    Username = users.TryGetValue(g.UserId, out var name) ? name : "Unknown",
+                    StartValue = g.StartValue,
+                    CurrentValue = g.EndValue,
+                    ProfitLossPercentage = (g.EndValue - g.StartValue) / g.StartValue * 100m,
+                    TransactionCount = txCounts.TryGetValue(g.UserId, out var cnt) ? cnt : 0,
+                })
+                .OrderByDescending(e => e.ProfitLossPercentage)
+                .Take(top)
+                .Select((e, i) => { e.Rank = i + 1; return e; })
+                .ToList();
+
+            return entries;
+        }
+
+        // ── Snapshot: save for all active users ───────────────────────────────
+        public async Task SaveSnapshotsForAllUsersAsync()
+        {
+            // Users who have at least one transaction
+            var userIds = await _context.Wallets
+                .Where(w => w.Transactions.Any())
+                .Select(w => w.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            _logger.LogInformation("Saving daily portfolio snapshots for {Count} users", userIds.Count);
+
+            foreach (var userId in userIds)
+            {
+                await SaveDailySnapshotAsync(userId);
+                // Small delay between users to avoid API rate limits
+                await Task.Delay(500);
+            }
         }
     }
 }

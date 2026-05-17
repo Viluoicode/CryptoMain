@@ -3,19 +3,21 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
     ArrowLeft, Plus, Trash2, ArrowUpRight, ArrowDownRight,
-    TrendingUp, TrendingDown, Layers,
+    TrendingUp, TrendingDown, Layers, Pencil,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { useWalletDetail } from '@/hooks/useWallet'
-import { useWalletTransactions, useCreateTransaction, useDeleteTransaction } from '@/hooks/useTransaction'
+import { useWalletDetail, useDepositFiat } from '@/hooks/useWallet'
+import { useWalletTransactions, useCreateTransaction, useUpdateTransaction, useDeleteTransaction } from '@/hooks/useTransaction'
 import { getTopCryptos } from '@/api/crypto'
 import { formatUSD, formatPct, formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { TransactionType, CryptoListResponse } from '@/types'
+import { useToast } from '@/components/ui/Toast'
+import type { TransactionType, CryptoListResponse, TransactionResponse } from '@/types'
 
 // ─── Add Transaction Modal ─────────────────────────────────────────────────────
-function AddTransactionModal({ walletId, onClose }: { walletId: string; onClose: () => void }) {
+function AddTransactionModal({ walletId, fiatBalance, onClose }: { walletId: string; fiatBalance: number; onClose: () => void }) {
     const { mutate, isPending } = useCreateTransaction()
+    const toast = useToast()
     const [type, setType] = useState<TransactionType>(1)
     const [search, setSearch] = useState('')
     const [selectedCoin, setSelectedCoin] = useState<CryptoListResponse | null>(null)
@@ -39,27 +41,50 @@ function AddTransactionModal({ walletId, onClose }: { walletId: string; onClose:
         : []
 
     const totalAmount = parseFloat(quantity || '0') * parseFloat(pricePerCoin || '0')
+    const insufficientFiat = type === 1 && totalAmount > 0 && totalAmount > fiatBalance
 
     const handleSelectCoin = (coin: CryptoListResponse) => {
         setSelectedCoin(coin)
-        setPricePerCoin(coin.currentPrice.toString())
+        // Round to 8 decimal places to stay within validator precision
+        setPricePerCoin(parseFloat(coin.currentPrice.toFixed(8)).toString())
         setSearch('')
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!selectedCoin || !quantity || !pricePerCoin) return
+
+        // Client-side fiat balance guard
+        if (insufficientFiat) {
+            toast.error(
+                'Không đủ số dư USD',
+                `Cần ${formatUSD(totalAmount)} — Hiện có ${formatUSD(fiatBalance)}`
+            )
+            return
+        }
+
         mutate(
             {
                 walletId,
                 coinId: selectedCoin.id,
                 type,
-                quantity: parseFloat(quantity),
-                pricePerCoin: parseFloat(pricePerCoin),
+                quantity: parseFloat(parseFloat(quantity).toFixed(8)),
+                pricePerCoin: parseFloat(parseFloat(pricePerCoin).toFixed(8)),
                 notes: notes || undefined,
                 transactionDate: new Date(date).toISOString(),
             },
-            { onSuccess: onClose }
+            {
+                onSuccess: () => { toast.success('Transaction added'); onClose() },
+                onError: (err: unknown) => {
+                    // Extract server error message from Axios response
+                    const axiosErr = err as { response?: { data?: { message?: string } | string } }
+                    const data = axiosErr?.response?.data
+                    const serverMsg = typeof data === 'object' && data !== null
+                        ? data.message
+                        : undefined
+                    toast.error(serverMsg ?? 'Thêm giao dịch thất bại')
+                },
+            }
         )
     }
 
@@ -157,12 +182,41 @@ function AddTransactionModal({ walletId, onClose }: { walletId: string; onClose:
                         </div>
                     </div>
 
-                    {totalAmount > 0 && (
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 flex justify-between items-center">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">Tổng giá trị</span>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">{formatUSD(totalAmount)}</span>
+                    <div className={cn(
+                        'rounded-xl px-4 py-3 space-y-1.5 transition-colors',
+                        insufficientFiat
+                            ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                            : 'bg-gray-50 dark:bg-gray-800'
+                    )}>
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">Số dư USD</span>
+                            <span className={cn(
+                                'text-sm font-semibold',
+                                insufficientFiat ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                            )}>
+                                {formatUSD(fiatBalance)}
+                            </span>
                         </div>
-                    )}
+                        {totalAmount > 0 && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">Tổng giá trị</span>
+                                <span className={cn(
+                                    'text-sm font-bold',
+                                    insufficientFiat ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                                )}>
+                                    {formatUSD(totalAmount)}
+                                </span>
+                            </div>
+                        )}
+                        {insufficientFiat && (
+                            <div className="flex items-center gap-1.5 pt-0.5">
+                                <span className="text-red-500 text-sm">⚠</span>
+                                <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                                    Không đủ số dư — thiếu {formatUSD(totalAmount - fiatBalance)}
+                                </p>
+                            </div>
+                        )}
+                    </div>
 
                     <div>
                         <label className={labelCls}>Ngày giao dịch</label>
@@ -181,9 +235,14 @@ function AddTransactionModal({ walletId, onClose }: { walletId: string; onClose:
                             Hủy
                         </button>
                         <button type="submit"
-                            disabled={!selectedCoin || !quantity || !pricePerCoin || isPending}
-                            className="flex-1 py-2.5 text-sm font-semibold bg-brand-600 text-white rounded-xl hover:bg-brand-700 disabled:opacity-50 transition">
-                            {isPending ? 'Đang lưu...' : 'Thêm giao dịch'}
+                            disabled={!selectedCoin || !quantity || !pricePerCoin || isPending || insufficientFiat}
+                            className={cn(
+                                'flex-1 py-2.5 text-sm font-semibold rounded-xl transition disabled:opacity-50',
+                                insufficientFiat
+                                    ? 'bg-red-500 text-white cursor-not-allowed'
+                                    : 'bg-brand-600 text-white hover:bg-brand-700'
+                            )}>
+                            {isPending ? 'Đang lưu...' : insufficientFiat ? 'Không đủ số dư' : 'Thêm giao dịch'}
                         </button>
                     </div>
                 </form>
@@ -195,6 +254,7 @@ function AddTransactionModal({ walletId, onClose }: { walletId: string; onClose:
 // ─── Delete Transaction Confirm ────────────────────────────────────────────────
 function DeleteTxConfirm({ txId, walletId, onClose }: { txId: string; walletId: string; onClose: () => void }) {
     const { mutate, isPending } = useDeleteTransaction(walletId)
+    const toast = useToast()
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -205,11 +265,141 @@ function DeleteTxConfirm({ txId, walletId, onClose }: { txId: string; walletId: 
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Hành động này không thể hoàn tác.</p>
                 <div className="flex gap-2 justify-end">
                     <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition">Hủy</button>
-                    <button disabled={isPending} onClick={() => mutate(txId, { onSuccess: onClose })}
+                    <button
+                        disabled={isPending}
+                        onClick={() => mutate(txId, {
+                            onSuccess: () => { toast.success('Transaction deleted'); onClose() },
+                            onError: () => { toast.error('Failed to delete'); onClose() },
+                        })}
                         className="px-4 py-2 text-sm font-semibold bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50 transition">
                         {isPending ? 'Đang xóa...' : 'Xóa'}
                     </button>
                 </div>
+            </div>
+        </div>
+    )
+}
+
+// ─── Edit Transaction Modal ────────────────────────────────────────────────────
+function EditTransactionModal({
+    tx, walletId, onClose,
+}: {
+    tx: { id: string; type: 1 | 2; quantity: number; pricePerCoin: number; notes: string | null; transactionDate: string }
+    walletId: string
+    onClose: () => void
+}) {
+    const { mutate, isPending } = useUpdateTransaction(walletId)
+    const toast = useToast()
+    const [type, setType] = useState<1 | 2>(tx.type)
+    const [quantity, setQuantity] = useState(String(tx.quantity))
+    const [price, setPrice] = useState(String(tx.pricePerCoin))
+    const [date, setDate] = useState(tx.transactionDate.slice(0, 10))
+    const [notes, setNotes] = useState(tx.notes ?? '')
+
+    const total = parseFloat(quantity || '0') * parseFloat(price || '0')
+
+    const inputCls = "w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900 transition"
+    const labelCls = "block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5"
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault()
+        if (!quantity || !price) return
+        mutate(
+            {
+                id: tx.id,
+                req: {
+                    type,
+                    quantity: parseFloat(quantity),
+                    pricePerCoin: parseFloat(price),
+                    notes: notes || undefined,
+                    transactionDate: new Date(date).toISOString(),
+                },
+            },
+            {
+                onSuccess: () => { toast.success('Transaction updated'); onClose() },
+                onError: (err: unknown) => {
+                    const axiosErr = err as { response?: { data?: { message?: string } | string } }
+                    const data = axiosErr?.response?.data
+                    const serverMsg = typeof data === 'object' && data !== null ? data.message : undefined
+                    toast.error(serverMsg ?? 'Cập nhật giao dịch thất bại')
+                },
+            }
+        )
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+                    <Pencil size={15} className="text-brand-600 dark:text-brand-400" />
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">Chỉnh sửa giao dịch</h3>
+                </div>
+                <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                    {/* Buy / Sell toggle */}
+                    <div className="flex rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                        {([1, 2] as const).map(t => (
+                            <button
+                                key={t}
+                                type="button"
+                                onClick={() => setType(t)}
+                                className={cn(
+                                    'flex-1 py-2.5 text-sm font-semibold transition',
+                                    type === t
+                                        ? t === 1
+                                            ? 'bg-emerald-500 text-white'
+                                            : 'bg-red-500 text-white'
+                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                )}
+                            >
+                                {t === 1 ? 'Buy' : 'Sell'}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className={labelCls}>Số lượng</label>
+                            <input type="number" step="any" min="0" required value={quantity}
+                                onChange={e => setQuantity(e.target.value)} className={inputCls} />
+                        </div>
+                        <div>
+                            <label className={labelCls}>Giá / coin (USD)</label>
+                            <input type="number" step="any" min="0" required value={price}
+                                onChange={e => setPrice(e.target.value)} className={inputCls} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className={labelCls}>Ngày giao dịch</label>
+                        <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputCls} />
+                    </div>
+
+                    <div>
+                        <label className={labelCls}>Ghi chú</label>
+                        <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+                            placeholder="Tùy chọn" className={inputCls} />
+                    </div>
+
+                    {total > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 flex justify-between text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">Tổng</span>
+                            <span className="font-bold text-gray-900 dark:text-white">
+                                ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 pt-1">
+                        <button type="button" onClick={onClose}
+                            className="flex-1 py-2.5 text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                            Hủy
+                        </button>
+                        <button type="submit" disabled={isPending}
+                            className="flex-1 py-2.5 text-sm font-semibold bg-brand-600 text-white rounded-xl hover:bg-brand-700 disabled:opacity-50 transition">
+                            {isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     )
@@ -225,8 +415,13 @@ export function WalletDetailPage() {
     const { data: transactions, isLoading: loadingTx } = useWalletTransactions(walletId)
 
     const [showAddTx, setShowAddTx] = useState(false)
+    const [showDeposit, setShowDeposit] = useState(false)
+    const [depositAmount, setDepositAmount] = useState('')
     const [deleteTxId, setDeleteTxId] = useState<string | null>(null)
+    const [editTx, setEditTx] = useState<TransactionResponse | null>(null)
     const [txFilter, setTxFilter] = useState<'all' | 'buy' | 'sell'>('all')
+    const toast = useToast()
+    const depositMut = useDepositFiat(walletId)
 
     const filteredTx = (transactions ?? []).filter((tx) => {
         if (txFilter === 'buy') return tx.type === 1
@@ -282,9 +477,55 @@ export function WalletDetailPage() {
 
                 {/* Summary */}
                 <div className="bg-gradient-to-r from-brand-600 to-indigo-600 rounded-2xl px-6 py-5 text-white">
-                    <p className="text-brand-200 text-xs mb-1">Tổng giá trị ví</p>
-                    <p className="text-3xl font-bold">{formatUSD(wallet.totalValue)}</p>
-                    <p className="text-brand-200 text-xs mt-1">{wallet.holdings?.length ?? 0} loại coin</p>
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                            <p className="text-brand-200 text-xs mb-1">Tổng giá trị ví</p>
+                            <p className="text-3xl font-bold">{formatUSD(wallet.totalValue)}</p>
+                            <p className="text-brand-200 text-xs mt-1">{wallet.holdings?.length ?? 0} loại coin</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-brand-200 text-xs mb-1">Số dư USD (Paper Trade)</p>
+                            <p className="text-2xl font-bold">{formatUSD(wallet.fiatBalance)}</p>
+                            {showDeposit ? (
+                                <div className="mt-2 flex gap-2 items-center">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="1000000"
+                                        placeholder="Số tiền..."
+                                        value={depositAmount}
+                                        onChange={e => setDepositAmount(e.target.value)}
+                                        className="w-28 px-2 py-1 text-sm rounded-lg bg-white/20 text-white placeholder-white/60 border border-white/30 outline-none focus:border-white"
+                                    />
+                                    <button
+                                        disabled={depositMut.isPending || !depositAmount}
+                                        onClick={() => {
+                                            const amt = parseFloat(depositAmount)
+                                            if (!amt || amt <= 0) return
+                                            depositMut.mutate(amt, {
+                                                onSuccess: () => { toast.success(`Đã nạp ${formatUSD(amt)}`); setShowDeposit(false); setDepositAmount('') },
+                                                onError: (err: unknown) => {
+                                                    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+                                                    toast.error(msg ?? 'Lỗi nạp tiền')
+                                                },
+                                            })
+                                        }}
+                                        className="px-3 py-1 text-xs font-semibold bg-white text-brand-700 rounded-lg hover:bg-brand-50 disabled:opacity-50 transition"
+                                    >
+                                        {depositMut.isPending ? '...' : 'Nạp'}
+                                    </button>
+                                    <button onClick={() => setShowDeposit(false)} className="text-white/60 hover:text-white text-xs">✕</button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setShowDeposit(true)}
+                                    className="mt-2 text-xs text-white/70 hover:text-white underline transition"
+                                >
+                                    + Nạp tiền
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Holdings */}
@@ -387,12 +628,22 @@ export function WalletDetailPage() {
                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatUSD(tx.totalAmount)}</p>
                                         <p className="text-xs text-gray-400 dark:text-gray-500">{tx.quantity} coins</p>
                                     </div>
-                                    <button
-                                        onClick={() => setDeleteTxId(tx.id)}
-                                        className="ml-2 w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-400 transition opacity-0 group-hover:opacity-100"
-                                    >
-                                        <Trash2 size={13} />
-                                    </button>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                                        <button
+                                            onClick={() => setEditTx(tx)}
+                                            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-500 transition"
+                                            title="Chỉnh sửa"
+                                        >
+                                            <Pencil size={13} />
+                                        </button>
+                                        <button
+                                            onClick={() => setDeleteTxId(tx.id)}
+                                            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 dark:text-gray-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-400 transition"
+                                            title="Xóa"
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -400,8 +651,9 @@ export function WalletDetailPage() {
                 </div>
             </div>
 
-            {showAddTx && <AddTransactionModal walletId={walletId} onClose={() => setShowAddTx(false)} />}
+            {showAddTx && <AddTransactionModal walletId={walletId} fiatBalance={wallet.fiatBalance} onClose={() => setShowAddTx(false)} />}
             {deleteTxId && <DeleteTxConfirm txId={deleteTxId} walletId={walletId} onClose={() => setDeleteTxId(null)} />}
+            {editTx && <EditTransactionModal tx={editTx} walletId={walletId} onClose={() => setEditTx(null)} />}
         </>
     )
 }

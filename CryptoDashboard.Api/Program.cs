@@ -8,6 +8,7 @@ using CryptoDashboard.Infrastructure.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http;
 using Microsoft.IdentityModel.Tokens;
@@ -15,9 +16,26 @@ using Microsoft.OpenApi.Models;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Polly;
 using Polly.Extensions.Http;
+using Serilog;
 using System.Net;
 using System.Text;
+using System.Threading.RateLimiting;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Serilog ───────────────────────────────────────────────────────────────────
+builder.Host.UseSerilog((ctx, services, cfg) => cfg
+    .ReadFrom.Configuration(ctx.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "CryptoDashboard.Api")
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    .WriteTo.File("logs/app-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7,
+        outputTemplate:
+            "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"));
 
 // Add services to the container.
 builder.Services.AddOpenApi();
@@ -37,6 +55,14 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IPortfolioService, PortfolioService>();
+builder.Services.AddScoped<IWatchlistService, WatchlistService>();
+builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IPositionService, PositionService>();
+builder.Services.AddScoped<IOnChainWalletService, OnChainWalletService>();
+
+// Alchemy Options
+builder.Services.Configure<AlchemyOptions>(builder.Configuration.GetSection(AlchemyOptions.SectionName));
 
 // CryptoApi Options
 var cryptoApiSection = builder.Configuration.GetSection(CryptoApiOptions.SectionName);
@@ -131,6 +157,18 @@ builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ICryptoPriceCache, MemoryCryptoPriceCache>();
 
+// Background price refresh
+builder.Services.AddHostedService<CryptoPriceRefreshService>();
+
+// Daily portfolio snapshot (runs at midnight UTC)
+builder.Services.AddHostedService<PortfolioSnapshotBackgroundService>();
+
+// Stop-loss / take-profit / limit order monitor (polls every 5s)
+builder.Services.AddHostedService<OrderMonitorBackgroundService>();
+
+// Margin position liquidation monitor (polls every 10s)
+builder.Services.AddHostedService<LiquidationBackgroundService>();
+
 // Crypto Service with Polly Resilience Policies
 builder.Services.AddHttpClient<ICryptoService, CryptoService>(client =>
 {
@@ -139,6 +177,41 @@ builder.Services.AddHttpClient<ICryptoService, CryptoService>(client =>
 })
 .AddPolicyHandler(GetRetryPolicy(cryptoApiOptions))
 .AddPolicyHandler(GetCircuitBreakerPolicy());
+
+// ── Health checks ─────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        builder.Configuration.GetConnectionString("MyConnect")!,
+        name: "postgres",
+        tags: new[] { "ready" });
+
+// ── Rate limiter ──────────────────────────────────────────────────────────────
+// "crypto"     — heavy upstream calls to CoinGecko; 30 req/min per IP
+// "leaderboard"— public anon endpoint; 10 req/min per IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("crypto", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+
+    options.AddPolicy("leaderboard", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
 
 var app = builder.Build();
 
@@ -149,16 +222,64 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Serilog request logging — captures method, path, status, duration
+app.UseSerilogRequestLogging(opts =>
+{
+    opts.MessageTemplate = "HTTP {RequestMethod} {RequestPath} → {StatusCode} in {Elapsed:0.0}ms";
+});
+
 // Global Exception Handling — must be early in the pipeline
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Health endpoints
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false, // liveness — process is up
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"), // readiness — DB reachable
+});
+
 app.MapControllers();
 
-app.Run();
+// Auto-apply EF migrations on startup (production deploys without a separate migrate step)
+if (app.Configuration.GetValue<bool>("RunMigrationsOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        Log.Information("Applying pending EF Core migrations…");
+        db.Database.Migrate();
+        Log.Information("Migrations applied");
+    }
+    catch (Exception ex)
+    {
+        Log.Fatal(ex, "Failed to apply migrations on startup");
+        throw;
+    }
+}
+
+try
+{
+    Log.Information("Starting CryptoDashboard.Api on {Environment}", app.Environment.EnvironmentName);
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 // --- Polly Policy Factories ---
 

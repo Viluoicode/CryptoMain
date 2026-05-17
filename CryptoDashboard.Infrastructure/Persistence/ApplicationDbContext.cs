@@ -18,6 +18,11 @@ namespace CryptoDashboard.Infrastructure.Persistence
         public DbSet<Transaction> Transactions { get; set; } = null!;
         public DbSet<PriceHistory> PriceHistories { get; set; } = null!;
         public DbSet<PortfolioSnapshot> PortfolioSnapshots { get; set; } = null!;
+        public DbSet<WatchlistItem> WatchlistItems { get; set; } = null!;
+        public DbSet<PriceAlert> PriceAlerts { get; set; } = null!;
+        public DbSet<TradeOrder> TradeOrders { get; set; } = null!;
+        public DbSet<Position> Positions { get; set; } = null!;
+        public DbSet<OnChainWallet> OnChainWallets { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,16 +43,13 @@ namespace CryptoDashboard.Infrastructure.Persistence
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-                entity.Property(e => e.RowVersion).IsRowVersion();
+                entity.Property(e => e.FiatBalance).HasPrecision(18, 2);
 
                 entity.HasOne(e => e.User)
                       .WithMany(u => u.Wallets)
                       .HasForeignKey(e => e.UserId)
                       .OnDelete(DeleteBehavior.Cascade);
-                // Trong OnModelCreating, phần Wallet
-                entity.Property(e => e.RowVersion)
-                      .IsRowVersion()
-                      .IsConcurrencyToken();
+
                 // ── Index ──
                 entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => new { e.UserId, e.IsDeleted });
@@ -108,6 +110,117 @@ namespace CryptoDashboard.Infrastructure.Persistence
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => new { e.UserId, e.SnapshotDate }).IsUnique();
+            });
+
+            // ─── WatchlistItem ─────────────────────────────────────────────────
+            modelBuilder.Entity<WatchlistItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CoinId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.CoinSymbol).HasMaxLength(20).IsRequired();
+
+                entity.HasOne(e => e.User)
+                      .WithMany(u => u.WatchlistItems)
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Each user can watch a coin only once
+                entity.HasIndex(e => new { e.UserId, e.CoinId }).IsUnique();
+
+                // Soft Delete filter
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            // ─── PriceAlert (hard delete — no soft delete) ─────────────────────
+            modelBuilder.Entity<PriceAlert>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CoinId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.CoinSymbol).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.CoinName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.TargetPrice).HasPrecision(18, 8);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => new { e.UserId, e.CoinId });
+            });
+
+            // ─── TradeOrder ────────────────────────────────────────────────────
+            modelBuilder.Entity<TradeOrder>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CoinId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.CoinSymbol).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.CoinName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.TriggerPrice).HasPrecision(18, 8);
+                entity.Property(e => e.Quantity).HasPrecision(18, 8);
+                entity.Property(e => e.FilledPrice).HasPrecision(18, 8);
+                entity.Property(e => e.FailureReason).HasMaxLength(500);
+
+                entity.HasOne(e => e.Wallet)
+                      .WithMany()
+                      .HasForeignKey(e => e.WalletId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => new { e.UserId, e.Status });
+                entity.HasIndex(e => new { e.Status, e.CoinId });
+            });
+
+            // ─── Position ──────────────────────────────────────────────────────
+            modelBuilder.Entity<Position>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CoinId).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.CoinSymbol).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.CoinName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.EntryPrice).HasPrecision(18, 8);
+                entity.Property(e => e.Quantity).HasPrecision(18, 8);
+                entity.Property(e => e.CollateralAmount).HasPrecision(18, 2);
+                entity.Property(e => e.LiquidationPrice).HasPrecision(18, 8);
+                entity.Property(e => e.ExitPrice).HasPrecision(18, 8);
+                entity.Property(e => e.RealizedPnL).HasPrecision(18, 2);
+                entity.Property(e => e.CloseReason).HasMaxLength(200);
+
+                entity.HasOne(e => e.Wallet)
+                      .WithMany()
+                      .HasForeignKey(e => e.WalletId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => new { e.UserId, e.Status });
+                entity.HasIndex(e => new { e.Status, e.CoinId });
+            });
+
+            // ─── OnChainWallet ─────────────────────────────────────────────────
+            modelBuilder.Entity<OnChainWallet>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Address).HasMaxLength(42).IsRequired();
+                entity.Property(e => e.Label).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Chain).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.NativeBalance).HasPrecision(28, 8);
+                entity.Property(e => e.NativeSymbol).HasMaxLength(10);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => new { e.UserId, e.Address }).IsUnique();
             });
         }
 
