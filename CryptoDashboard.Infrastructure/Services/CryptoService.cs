@@ -53,7 +53,7 @@ namespace CryptoDashboard.Infrastructure.Services
                 return cachedData;
             }
 
-            var url = $"{_options.BaseUrl}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page={limit}&page=1&sparkline=false";
+            var url = $"{_options.BaseUrl}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page={limit}&page=1&sparkline=true&price_change_percentage=24h";
 
             var response = await SendRateLimitedRequestAsync(url);
 
@@ -277,7 +277,10 @@ namespace CryptoDashboard.Infrastructure.Services
                 CurrentPrice = c.CurrentPrice ?? 0,
                 PriceChangePercentage24h = c.PriceChangePercentage24h ?? 0,
                 MarketCap = c.MarketCap ?? 0,
-                TotalVolume = c.TotalVolume ?? 0
+                TotalVolume = c.TotalVolume ?? 0,
+                High24h = c.High24h ?? 0,
+                Low24h = c.Low24h ?? 0,
+                Sparkline7d = c.SparklineIn7d?.Price
             };
         }
         public async Task<List<CryptoOhlcResponse>> GetOhlcAsync(string coinId, int days = 7)

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace CryptoDashboard.Application.DTOs.Crypto
 {
@@ -33,7 +28,22 @@ namespace CryptoDashboard.Application.DTOs.Crypto
         [JsonPropertyName("total_volume")]
         public decimal? TotalVolume { get; set; }
 
+        [JsonPropertyName("high_24h")]
+        public decimal? High24h { get; set; }
+
+        [JsonPropertyName("low_24h")]
+        public decimal? Low24h { get; set; }
+
+        [JsonPropertyName("sparkline_in_7d")]
+        public SparklineData? SparklineIn7d { get; set; }
+
         [JsonPropertyName("last_updated")]
         public DateTime LastUpdated { get; set; }
+    }
+
+    public class SparklineData
+    {
+        [JsonPropertyName("price")]
+        public List<decimal>? Price { get; set; }
     }
 }
