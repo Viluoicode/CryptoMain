@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { formatUSD } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { WalletResponse } from '@/types'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type ModalState =
     | { type: 'none' }
@@ -437,6 +438,7 @@ function EmptyWallets({ onCreate }: { onCreate: () => void }) {
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export function WalletsPage() {
+    useDocumentTitle('Wallets')
     const { data: wallets, isLoading, isError } = useWallets()
     const [modal, setModal] = useState<ModalState>({ type: 'none' })
     const close = () => setModal({ type: 'none' })

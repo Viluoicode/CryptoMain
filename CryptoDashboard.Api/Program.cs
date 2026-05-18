@@ -3,6 +3,7 @@ using CryptoDashboard.Application.Interfaces;
 using CryptoDashboard.Application.Options;
 using CryptoDashboard.Application.Validators;
 using CryptoDashboard.Infrastructure.Caching;
+using CryptoDashboard.Infrastructure.HealthChecks;
 using CryptoDashboard.Infrastructure.Persistence;
 using CryptoDashboard.Infrastructure.Services;
 using FluentValidation;
@@ -10,6 +11,7 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Http;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -60,6 +62,8 @@ builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPositionService, PositionService>();
 builder.Services.AddScoped<IOnChainWalletService, OnChainWalletService>();
+builder.Services.AddSingleton<IClientErrorLogger, SerilogClientErrorLogger>();
+builder.Services.AddSingleton<IIdempotencyService, MemoryIdempotencyService>();
 
 // Alchemy Options
 builder.Services.Configure<AlchemyOptions>(builder.Configuration.GetSection(AlchemyOptions.SectionName));
@@ -183,6 +187,10 @@ builder.Services.AddHealthChecks()
     .AddNpgSql(
         builder.Configuration.GetConnectionString("MyConnect")!,
         name: "postgres",
+        tags: new[] { "ready" })
+    .AddCheck<CryptoPriceCacheHealthCheck>(
+        name: "crypto-price-cache",
+        failureStatus: HealthStatus.Degraded,
         tags: new[] { "ready" });
 
 // ── Rate limiter ──────────────────────────────────────────────────────────────
@@ -208,6 +216,39 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+
+    // "auth-login"    — anti brute-force on /api/auth/login;    5 req/min per IP
+    // "auth-register" — anti spam on        /api/auth/register; 3 req/min per IP
+    options.AddPolicy("auth-login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+
+    options.AddPolicy("auth-register", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 3,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+
+    // "errors" — frontend error log endpoint; 20 req/min per IP (prevents log spam)
+    options.AddPolicy("errors", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));

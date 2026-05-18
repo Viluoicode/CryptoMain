@@ -2,25 +2,45 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <!-- ── Primary meta ──────────────────────────────────────────────────── -->
-    <title>CryptoDash — Theo dõi danh mục Crypto</title>
-    <meta name="description" content="CryptoDash là ứng dụng theo dõi danh mục đầu tư tiền mã hoá. Xem giá realtime từ Binance, quản lý ví, giao dịch và phân tích kỹ thuật ngay trong trình duyệt." />
-    <meta name="keywords" content="crypto, bitcoin, portfolio tracker, danh mục đầu tư, tiền mã hoá, binance, coingecko" />
+    <!-- ── Primary meta ─────────────────────────────────────────────────── -->
+    <title>CryptoDash — Professional Crypto Portfolio Simulator</title>
+    <meta name="description" content="Professional crypto portfolio simulator: real-time Binance prices, spot + futures + margin trading, on-chain wallet tracking, leaderboard. Free, no real money." />
+    <meta name="keywords" content="crypto, bitcoin, portfolio tracker, trading simulator, margin trading, futures, binance, coingecko, on-chain wallet" />
     <meta name="author" content="CryptoDash" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://cryptodash.app/" />
 
-    <!-- ── Open Graph / Social preview ──────────────────────────────────── -->
+    <!-- ── Open Graph (Facebook / LinkedIn / Discord) ───────────────────── -->
     <meta property="og:type"        content="website" />
-    <meta property="og:title"       content="CryptoDash — Theo dõi danh mục Crypto" />
-    <meta property="og:description" content="Theo dõi giá coin realtime, quản lý ví, giao dịch và phân tích kỹ thuật chuyên nghiệp." />
+    <meta property="og:site_name"   content="CryptoDash" />
+    <meta property="og:title"       content="CryptoDash — Trade Crypto Like a Pro" />
+    <meta property="og:description" content="Professional crypto portfolio simulator with real-time data, spot + futures trading, margin positions, and on-chain wallet tracking." />
+    <meta property="og:image"       content="/og-cover.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:locale"      content="vi_VN" />
+    <meta property="og:url"         content="https://cryptodash.app/" />
+
+    <!-- ── Twitter Card ─────────────────────────────────────────────────── -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="CryptoDash — Trade Crypto Like a Pro" />
+    <meta name="twitter:description" content="Professional crypto portfolio simulator with real-time data and margin trading." />
+    <meta name="twitter:image"       content="/og-cover.svg" />
 
     <!-- ── Theme colour (matches app bg) ────────────────────────────────── -->
     <meta name="theme-color" content="#030712" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <!-- ── Favicon (inline SVG data URI — no extra file needed) ─────────── -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/></svg>" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23facc15' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/></svg>" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23facc15'><polyline points='23 6 13.5 15.5 8.5 10.5 1 18' fill='none' stroke='%23facc15' stroke-width='2'/></svg>" />
+
+    <!-- ── Preconnect to external image CDNs (speeds up coin icons) ─────── -->
+    <link rel="preconnect" href="https://assets.coingecko.com" crossorigin />
+    <link rel="dns-prefetch" href="https://assets.coingecko.com" />
 
     <!-- ── Dark mode bootstrap (runs before React mounts) ───────────────── -->
     <script>

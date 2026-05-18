@@ -26,11 +26,16 @@ export default {
                     '0%': { opacity: '1' },
                     '100%': { opacity: '0' },
                 },
+                pulseSlow: {
+                    '0%, 100%': { opacity: '0.5' },
+                    '50%': { opacity: '0.9' },
+                },
             },
             animation: {
                 ticker: 'ticker 30s linear infinite',
                 'slide-in': 'slideIn 0.3s ease-out forwards',
                 'fade-out': 'fadeOut 0.3s ease-in forwards',
+                'pulse-slow': 'pulseSlow 6s ease-in-out infinite',
             },
         },
     },

@@ -1,9 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace CryptoDashboard.Application.DTOs.Crypto
 {
     public class CryptoListResponse
@@ -16,5 +10,8 @@ namespace CryptoDashboard.Application.DTOs.Crypto
         public decimal PriceChangePercentage24h { get; set; }
         public decimal MarketCap { get; set; }
         public decimal TotalVolume { get; set; }
+        public decimal High24h { get; set; }
+        public decimal Low24h { get; set; }
+        public List<decimal>? Sparkline7d { get; set; }
     }
 }

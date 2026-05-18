@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using CryptoDashboard.Application.DTOs.Auth;
 using CryptoDashboard.Application.Interfaces;
 using System.Security.Claims;
@@ -18,6 +19,7 @@ namespace CryptoDashboard.Api.Controllers
         }
 
         [HttpPost("register")]
+        [EnableRateLimiting("auth-register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             try
@@ -32,6 +34,7 @@ namespace CryptoDashboard.Api.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("auth-login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             try

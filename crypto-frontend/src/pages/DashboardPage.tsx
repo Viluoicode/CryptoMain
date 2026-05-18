@@ -15,6 +15,7 @@ import { getWallets } from '@/api/wallet'
 import { getAllTransactionsPaged } from '@/api/transaction'
 import { formatUSD, formatPct, formatDate } from '@/lib/format'
 import { useAuth } from '@/hooks/useAuth'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { cn } from '@/lib/utils'
 import { FearGreedWidget } from '@/components/FearGreedWidget'
 
@@ -214,6 +215,7 @@ function StatCard({
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export function DashboardPage() {
+    useDocumentTitle('Dashboard')
     const { user } = useAuth()
     const navigate  = useNavigate()
 

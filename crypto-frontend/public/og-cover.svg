@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0f1c"/>
+      <stop offset="0.5" stop-color="#1a1233"/>
+      <stop offset="1" stop-color="#030712"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0.3" cy="0.3" r="0.5">
+      <stop offset="0" stop-color="#6366f1" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.7" cy="0.7" r="0.5">
+      <stop offset="0" stop-color="#facc15" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#facc15" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow1)"/>
+  <rect width="1200" height="630" fill="url(#glow2)"/>
+
+  <!-- Grid pattern -->
+  <g stroke="#1f2937" stroke-width="1" opacity="0.4">
+    <path d="M0 80 L1200 80 M0 160 L1200 160 M0 240 L1200 240 M0 320 L1200 320 M0 400 L1200 400 M0 480 L1200 480 M0 560 L1200 560"/>
+    <path d="M80 0 L80 630 M160 0 L160 630 M240 0 L240 630 M320 0 L320 630 M400 0 L400 630 M480 0 L480 630 M560 0 L560 630 M640 0 L640 630 M720 0 L720 630 M800 0 L800 630 M880 0 L880 630 M960 0 L960 630 M1040 0 L1040 630 M1120 0 L1120 630"/>
+  </g>
+
+  <!-- Logo mark -->
+  <g transform="translate(80, 80)">
+    <rect width="56" height="56" rx="12" fill="#facc15"/>
+    <polyline points="46 18 26 38 18 30 10 38" fill="none" stroke="#030712" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="36 18 46 18 46 28" fill="none" stroke="#030712" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="160" y="125" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="32" fill="#ffffff">CryptoDash</text>
+
+  <!-- Headline -->
+  <text x="80" y="290" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="84" fill="#ffffff">Trade Crypto</text>
+  <text x="80" y="380" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="84" fill="#facc15">Like a Pro</text>
+
+  <!-- Subtitle -->
+  <text x="80" y="450" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="28" fill="#9ca3af">Real-time portfolio simulator · Spot + Futures + Margin</text>
+
+  <!-- Trust badges -->
+  <g transform="translate(80, 510)">
+    <rect width="180" height="48" rx="24" fill="#1f2937" stroke="#374151"/>
+    <text x="90" y="32" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="600" font-size="16" fill="#ffffff">100+ Coins</text>
+  </g>
+  <g transform="translate(280, 510)">
+    <rect width="200" height="48" rx="24" fill="#1f2937" stroke="#374151"/>
+    <text x="100" y="32" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="600" font-size="16" fill="#ffffff">24/7 Real-time</text>
+  </g>
+  <g transform="translate(500, 510)">
+    <rect width="220" height="48" rx="24" fill="#facc15"/>
+    <text x="110" y="32" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="16" fill="#030712">$10K Demo Balance</text>
+  </g>
+</svg>

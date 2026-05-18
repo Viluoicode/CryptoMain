@@ -82,7 +82,7 @@ export function WatchlistPage() {
                                         >
                                             <td className="px-4 py-3.5">
                                                 <div className="flex items-center gap-2.5">
-                                                    <img src={coin.image} alt={coin.name} className="w-7 h-7 rounded-full shrink-0" />
+                                                    <img src={coin.image} alt={coin.name} loading="lazy" decoding="async" className="w-7 h-7 rounded-full shrink-0" />
                                                     <div>
                                                         <p className="font-semibold text-gray-900 dark:text-white">{coin.name}</p>
                                                         <p className="text-xs text-gray-400 uppercase">{coin.symbol}</p>

@@ -2,6 +2,7 @@
 // ─── React Error Boundary — prevents white screen on unhandled render errors ──
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { TrendingUp, RefreshCw, Home } from 'lucide-react'
+import { reportClientError } from '@/api/telemetry'
 
 interface Props {
     children: ReactNode
@@ -25,9 +26,20 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     componentDidCatch(error: Error, info: ErrorInfo) {
-        // Log to console in dev; in production swap for a real error-tracking
-        // service (e.g. Sentry) here.
+        // Always log to console for local debugging
         console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack)
+
+        // Ship to backend telemetry sink in production (best-effort, never re-throws)
+        if (!import.meta.env.DEV) {
+            reportClientError({
+                message: error.message,
+                stack: error.stack,
+                componentStack: info.componentStack ?? undefined,
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                context: 'ErrorBoundary',
+            })
+        }
     }
 
     handleReset = () => {

@@ -276,4 +276,7 @@ export interface CryptoListResponse {
   priceChangePercentage24h: number
   marketCap: number
   totalVolume: number
+  high24h: number
+  low24h: number
+  sparkline7d?: number[] | null
 }

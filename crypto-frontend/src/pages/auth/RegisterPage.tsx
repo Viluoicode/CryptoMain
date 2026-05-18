@@ -8,6 +8,7 @@ import { AuthLayout } from '@/components/AuthLayout'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/hooks/useAuth'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // ─── Validation — mirror C# [StringLength] / [MinLength] annotations ──────────
 const registerSchema = z
@@ -37,6 +38,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export function RegisterPage() {
+    useDocumentTitle('Đăng ký')
     const { register: registerUser, isLoading, error, clearError } = useAuth()
     const navigate = useNavigate()
 
