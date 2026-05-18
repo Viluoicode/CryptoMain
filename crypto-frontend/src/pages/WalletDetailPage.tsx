@@ -156,7 +156,7 @@ function AddTransactionModal({ walletId, fiatBalance, onClose }: { walletId: str
                                                 onClick={() => handleSelectCoin(coin)}
                                                 className="flex items-center gap-2 w-full px-3 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition text-left"
                                             >
-                                                <img src={coin.image} alt={coin.name} className="w-5 h-5 rounded-full" />
+                                                <img src={coin.image} alt={coin.name} loading="lazy" decoding="async" className="w-5 h-5 rounded-full" />
                                                 <span className="font-medium text-gray-900 dark:text-white">{coin.name}</span>
                                                 <span className="text-gray-400 uppercase text-xs">{coin.symbol}</span>
                                                 <span className="ml-auto text-gray-500 dark:text-gray-400 text-xs">{formatUSD(coin.currentPrice)}</span>

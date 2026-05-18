@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { apiClient } from '@/api/client'
 import { cn } from '@/lib/utils'
 import type { TransactionType } from '@/types'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20
@@ -101,6 +102,7 @@ function SortHeader({
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export function TransactionsPage() {
+    useDocumentTitle('Transactions')
     const [page, setPage] = useState(1)
     const [filter, setFilter] = useState<FilterType>('All')
     const [search, setSearch] = useState('')

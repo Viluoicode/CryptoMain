@@ -8,6 +8,7 @@ import { AuthLayout } from '@/components/AuthLayout'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/hooks/useAuth'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // ─── Validation ────────────────────────────────────────────────────────────────
 const loginSchema = z.object({
@@ -24,6 +25,7 @@ type LoginFormValues = z.infer<typeof loginSchema>
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export function LoginPage() {
+    useDocumentTitle('Đăng nhập')
     const { login, isLoading, error, clearError, isAuthenticated } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()

@@ -1,8 +1,10 @@
 // src/pages/NotFoundPage.tsx
 import { useNavigate } from 'react-router-dom'
 import { TrendingUp, Home, ArrowLeft, Search } from 'lucide-react'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function NotFoundPage() {
+    useDocumentTitle('404 — Không tìm thấy')
     const navigate = useNavigate()
 
     return (

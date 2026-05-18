@@ -14,6 +14,7 @@ import { useWatchlist } from '@/hooks/useWatchlist'
 import { useBinanceWs } from '@/hooks/useBinanceWs'
 import { useLivePriceStore } from '@/store/livePriceStore'
 import { useAuth } from '@/hooks/useAuth'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import type { CryptoListResponse } from '@/types'
 import type { LiveTick } from '@/store/livePriceStore'
 
@@ -247,7 +248,7 @@ function CoinRow({ coin, onClick, onTrade, isWatched, onToggleWatch, liveTick, c
                             className={cn(isWatched ? 'text-amber-400 fill-amber-400' : 'text-gray-600 group-hover:text-gray-400')}
                         />
                     </button>
-                    <img src={coin.image} alt={coin.name} className="w-7 h-7 rounded-full shrink-0" />
+                    <img src={coin.image} alt={coin.name} loading="lazy" decoding="async" className="w-7 h-7 rounded-full shrink-0" />
                     <div className="min-w-0">
                         <div className="flex items-baseline gap-1.5">
                             <span className="font-semibold text-white text-sm uppercase">{coin.symbol}</span>
@@ -349,6 +350,7 @@ function SkeletonRows() {
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export function MarketPage() {
+    useDocumentTitle('Markets')
     const navigate = useNavigate()
     const { isAuthenticated } = useAuth()
     const { isWatched, toggle, watchlist } = useWatchlist()

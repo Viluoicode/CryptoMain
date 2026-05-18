@@ -14,6 +14,7 @@ import { formatUSD, formatPct } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { PortfolioCoinAllocation } from '@/types'
 import { useLivePriceStore } from '@/store/livePriceStore'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // ─── Day range options ─────────────────────────────────────────────────────────
 const DAY_OPTIONS = [
@@ -314,6 +315,7 @@ function HoldingsTable({ allocations }: { allocations: PortfolioCoinAllocation[]
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export function PortfolioPage() {
+    useDocumentTitle('Portfolio')
     const [historyDays, setHistoryDays] = useState(30)
 
     const { data: summary,     isLoading: loadingSummary } = useQuery({

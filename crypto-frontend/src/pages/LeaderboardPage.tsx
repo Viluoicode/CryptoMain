@@ -4,6 +4,7 @@ import { Trophy, TrendingUp, TrendingDown, Download } from 'lucide-react'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { cn } from '@/lib/utils'
 import type { LeaderboardPeriod } from '@/types'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 const PERIOD_LABELS: Record<LeaderboardPeriod, string> = {
   1: 'Tuần này',
@@ -12,6 +13,7 @@ const PERIOD_LABELS: Record<LeaderboardPeriod, string> = {
 }
 
 export function LeaderboardPage() {
+  useDocumentTitle('Leaderboard')
   const [period, setPeriod] = useState<LeaderboardPeriod>(1)
   const { data: entries, isLoading } = useLeaderboard(period)
   const tableRef = useRef<HTMLDivElement>(null)
