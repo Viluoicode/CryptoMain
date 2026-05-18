@@ -55,6 +55,20 @@ Key config sections:
 - `Jwt:SecretKey`, `Jwt:Issuer`, `Jwt:Audience`
 - `Cors:AllowedOrigins` — string array (production only; dev allows any origin)
 - `CryptoApi:TimeoutSeconds`, `CryptoApi:RetryCount`, `CryptoApi:RetryBaseDelayMs`
+- `Alchemy:ApiKey` — Alchemy Web3 API key (optional; used for on-chain balance sync)
+- `Alchemy:BaseUrl` — default `https://eth-mainnet.g.alchemy.com/v2/`
+- `RunMigrationsOnStartup` — `"true"` in production to auto-apply EF migrations on startup
+
+### Docker local — `.env.docker` (copy from `.env.docker.example`)
+```
+POSTGRES_DB=cryptodash
+POSTGRES_USER=cryptodash
+POSTGRES_PASSWORD=changeme
+JWT_SECRET_KEY=<min 32 chars>
+ALCHEMY_API_KEY=          # optional
+COINGECKO_API_KEY=        # optional
+VITE_API_URL=http://localhost:8080
+```
 
 ---
 
@@ -65,7 +79,7 @@ Key config sections:
 - Zustand (auth + live prices) + TanStack Query v5 (all server state)
 - Path alias: `@/` → `src/`
 
-### Pages (15 total — all lazy-loaded via `React.lazy`)
+### Pages (19 total — all lazy-loaded via `React.lazy`)
 | Route | Component | Notes |
 |---|---|---|
 | `/` | `LandingPage` | Public landing |
@@ -82,6 +96,9 @@ Key config sections:
 | `/watchlist` | `WatchlistPage` | Favourite coins |
 | `/alerts` | `PriceAlertsPage` | Price alerts Above/Below |
 | `/trade` | `FuturesPage` | Full trading terminal (KLineChart) |
+| `/orders` | `FuturesOrdersPage` | Stop-loss / Take-profit / Limit orders + Margin positions tabs |
+| `/onchain` | `OnChainPage` | On-chain EVM wallet tracker; MetaMask connect or manual address |
+| `/leaderboard` | `LeaderboardPage` | Top traders P&L%, period tabs, PNG export via html-to-image |
 | `/settings` | `SettingsPage` | Profile + change password |
 | `*` | `NotFoundPage` | 404 with Back/Home/Market buttons |
 
@@ -95,7 +112,10 @@ Key config sections:
       <PublicLayout>             /market, /market/:coinId
       <GuestRoute>               /login, /register
       <ProtectedRoute>
-        <AppLayout>              all 10 protected pages
+        <AppLayout>              all 14 protected pages (dashboard, wallets, wallets/:id,
+                                   portfolio, convert, transactions, watchlist, alerts,
+                                   trade, orders, onchain, leaderboard, settings)
+      /leaderboard               → LeaderboardPage (public — no auth needed)
       *                          → NotFoundPage
 ```
 
@@ -127,6 +147,10 @@ src/
     portfolio.ts      ← getPortfolioSummary, getPortfolioPerformance, getPortfolioHistory
     watchlist.ts      ← getWatchlist, addToWatchlist, removeFromWatchlist, syncWatchlistFromLocalStorage
     priceAlert.ts     ← getAlerts, createAlert, deleteAlert
+    order.ts          ← getUserOrders, createOrder, cancelOrder
+    position.ts       ← getUserPositions, openPosition, closePosition
+    onchain.ts        ← getOnChainWallets, addOnChainWallet, syncOnChainWallet, removeOnChainWallet
+    leaderboard.ts    ← getLeaderboard(period)
   store/
     authStore.ts      ← Zustand: user, isAuthenticated, login, register, logout, updateUsername, initialize
     livePriceStore.ts ← Zustand: ticks Record<symbol,LiveTick>, connected, setTick, setConnected, reset
@@ -137,6 +161,11 @@ src/
     useTransaction.ts     ← useAllTransactions, useWalletTransactions, useCreateTransaction, useUpdateTransaction, useDeleteTransaction
     useWatchlist.ts       ← useWatchlist (toggle helper), useWatchlistSync, getLocalStorageWatchlist
     usePriceAlert.ts      ← useAlerts, useCreateAlert, useDeleteAlert
+    useOrder.ts           ← useUserOrders, useCreateOrder, useCancelOrder
+    usePosition.ts        ← useUserPositions, useOpenPosition, useClosePosition
+    useOnChain.ts         ← useOnChainWallets, useAddOnChainWallet, useSyncOnChainWallet, useRemoveOnChainWallet
+    useLeaderboard.ts     ← useLeaderboard(period)
+    useMetaMask.ts        ← raw window.ethereum; connect/disconnect; accountsChanged/chainChanged listeners; TypeScript Window extension
   components/
     layout/AppLayout.tsx  ← sidebar + GlobalMarketBar + SidebarTicker (BTC/ETH/BNB live prices)
     GlobalMarketBar.tsx   ← CoinGecko /global market cap bar (top of every non-/trade page)
@@ -151,7 +180,8 @@ src/
   types/
     index.ts       ← all shared TypeScript interfaces (see Types section below)
     auth.ts        ← AuthUser { username, email }, AuthResponse, LoginRequest, RegisterRequest
-  pages/           ← 15 page components (all named exports, e.g. export function DashboardPage)
+  pages/           ← 19 page components (all named exports, e.g. export function DashboardPage)
+                      New: FuturesOrdersPage, OnChainPage, LeaderboardPage
 ```
 
 ---
@@ -259,6 +289,28 @@ CreatePriceAlertRequest { coinId, coinSymbol, coinName, targetPrice, direction }
 
 // Crypto (CoinGecko via backend cache)
 CryptoListResponse { id, symbol, name, image, currentPrice, priceChangePercentage24h, marketCap, totalVolume }
+
+// Orders (Stop-loss / Take-profit / Limit)
+OrderSide   = 1 | 2          // 1=Buy, 2=Sell
+OrderType   = 1 | 2 | 3      // 1=StopLoss, 2=TakeProfit, 3=Limit
+OrderStatus = 1 | 2 | 3 | 4  // 1=Pending, 2=Filled, 3=Cancelled, 4=Failed
+OrderResponse        { id, walletId, walletName, coinId, coinSymbol, coinName, side, type, triggerPrice, quantity, status, createdAt, filledAt, cancelledAt, filledPrice, failureReason, transactionId }
+CreateOrderRequest   { walletId, coinId, side, type, triggerPrice, quantity }
+
+// Margin Positions
+PositionSide   = 1 | 2     // 1=Long, 2=Short
+PositionStatus = 1 | 2 | 3 // 1=Open, 2=Closed, 3=Liquidated
+PositionResponse      { id, walletId, walletName, coinId, coinSymbol, coinName, side, entryPrice, quantity, leverage, collateralAmount, liquidationPrice, status, exitPrice, realizedPnL, closeReason, openedAt, closedAt, currentPrice, unrealizedPnL, unrealizedPnLPercentage, marginRatio }
+OpenPositionRequest   { walletId, coinId, side, quantity, leverage }
+
+// On-Chain Wallets
+TokenBalance          { symbol, name, contractAddress, balance, decimals }
+OnChainWalletResponse { id, address, label, chain, nativeBalance, nativeSymbol, tokens: TokenBalance[], createdAt, lastSyncedAt }
+AddOnChainWalletRequest { address, label, chain }
+
+// Leaderboard
+LeaderboardPeriod = 1 | 2 | 3  // 1=Week, 2=Month, 3=AllTime
+LeaderboardEntry  { rank, userId, username, profitLossPercentage, currentValue, startValue, transactionCount }
 ```
 
 ---
@@ -298,26 +350,35 @@ CryptoListResponse { id, symbol, name, image, currentPrice, priceChangePercentag
 ```
 CryptoDashboard.Domain\
   Entities\        ← User, Wallet, Transaction, WatchlistItem, PriceAlert,
-                     PortfolioSnapshot, PriceHistory, CryptoCurrency
+                     PortfolioSnapshot, PriceHistory, CryptoCurrency,
+                     TradeOrder, Position, OnChainWallet          ← NEW
   Common\          ← BaseEntity (IsDeleted, DeletedAt, CreatedAt, UpdatedAt)
 
 CryptoDashboard.Application\
   Interfaces\      ← IAuthService, IWalletService, ITransactionService,
                      IPortfolioService, IWatchlistService, IPriceAlertService,
-                     ICryptoService, IJwtService, ICryptoPriceCache, IApplicationDbContext
+                     ICryptoService, IJwtService, ICryptoPriceCache, IApplicationDbContext,
+                     IOrderService, IPositionService, IOnChainWalletService  ← NEW
   DTOs\            ← Auth/, Wallet/, Transaction/, Portfolio/, Watchlist/, PriceAlert/,
-                     Common/PagedResult<T>
+                     Common/PagedResult<T>,
+                     Order/, Position/, OnChain/                 ← NEW
+  Options\         ← AlchemyOptions (SectionName="Alchemy")     ← NEW
   Validators\      ← FluentValidation for CreateTransactionRequest, UpdateTransactionRequest
 
 CryptoDashboard.Infrastructure\
   Persistence\     ← ApplicationDbContext (EF Core + Npgsql)
   Services\        ← implementations of all IXxxService interfaces
+                     + OrderService, PositionService, OnChainWalletService  ← NEW
+                     + OrderMonitorBackgroundService (5s poll, fills triggered orders)  ← NEW
+                     + LiquidationBackgroundService (10s poll, liquidates positions)   ← NEW
   Security\        ← TokenHasher (SHA-256), JwtService
   Caching\         ← MemoryCryptoPriceCache (IMemoryCache)
 
 CryptoDashboard.Api\
   Controllers\     ← AuthController, WalletController, TransactionController,
-                     PortfolioController, WatchlistController, PriceAlertController
+                     PortfolioController, WatchlistController, PriceAlertController,
+                     CryptoController (+ rate limiting),         ← UPDATED
+                     OrderController, PositionController, OnChainWalletController  ← NEW
   Middleware\      ← GlobalExceptionHandlerMiddleware
 ```
 
@@ -386,6 +447,46 @@ decimal PriceChangePercentage24h; decimal MarketCap; decimal TotalVolume;
 string Image; DateTime LastUpdated;
 ```
 
+### `TradeOrder` (does NOT inherit BaseEntity → **hard delete on cancel**)
+```csharp
+Guid Id; Guid UserId; Guid WalletId;
+string CoinId; string CoinSymbol; string CoinName;
+OrderSide Side;           // Buy=1, Sell=2
+OrderType Type;           // StopLoss=1, TakeProfit=2, Limit=3
+OrderStatus Status;       // Pending=1, Filled=2, Cancelled=3, Failed=4
+decimal TriggerPrice; decimal Quantity;
+DateTime CreatedAt; DateTime? FilledAt; DateTime? CancelledAt;
+decimal? FilledPrice; string? FailureReason; Guid? TransactionId;
+```
+`OrderMonitorBackgroundService` evaluates `OrderTriggerEvaluator.IsTriggered(order, currentPrice)` every 5 s.
+
+### `Position` (does NOT inherit BaseEntity — closed/liquidated preserved for history)
+```csharp
+Guid Id; Guid UserId; Guid WalletId;
+string CoinId; string CoinSymbol; string CoinName;
+PositionSide Side;     // Long=1, Short=2
+PositionStatus Status; // Open=1, Closed=2, Liquidated=3
+decimal EntryPrice; decimal Quantity; int Leverage;
+decimal CollateralAmount;   // = (EntryPrice * Quantity) / Leverage
+decimal LiquidationPrice;   // Long: EntryPrice*(1 - 1/Leverage + MaintenanceMarginRate)
+                            // Short: EntryPrice*(1 + 1/Leverage - MaintenanceMarginRate)
+decimal? ExitPrice; decimal? RealizedPnL; string? CloseReason;
+DateTime OpenedAt; DateTime? ClosedAt;
+```
+`MaintenanceMarginRate = 5%`. `LiquidationBackgroundService` polls every 10 s.
+
+### `OnChainWallet` (does NOT inherit BaseEntity)
+```csharp
+Guid Id; Guid UserId;
+string Address;    // EVM 0x-prefixed, 42 chars; unique per (UserId, Address)
+string Label;
+string Chain;      // "ethereum" | "polygon" | "bsc" | "arbitrum"
+decimal NativeBalance;
+string NativeSymbol;
+string TokensJson;          // JSON-serialised List<TokenBalance>; deserialized in service layer
+DateTime CreatedAt; DateTime? LastSyncedAt;
+```
+
 ---
 
 ## Database (EF Core / Npgsql / PostgreSQL)
@@ -432,13 +533,14 @@ string Image; DateTime LastUpdated;
 | DELETE | `/{id}` | Soft-delete (reverses fiat balance) |
 | GET | `/export` | CSV download (up to 10,000 rows) — **already implemented** |
 
-### Portfolio (`/api/Portfolio`) — `PortfolioController` (all `[Authorize]`)
-| Method | Route | Description |
-|---|---|---|
-| GET | `/` | Portfolio summary (allocations, P&L, totals) |
-| GET | `/performance` | Buy/sell totals, unrealized P&L |
-| GET | `/history?days=30` | Historical snapshots (7–365 days) |
-| POST | `/snapshot` | Manual snapshot trigger |
+### Portfolio (`/api/Portfolio`) — `PortfolioController`
+| Method | Route | Auth | Rate Limit | Description |
+|---|---|---|---|---|
+| GET | `/` | ✅ | — | Portfolio summary (allocations, P&L, totals) |
+| GET | `/performance` | ✅ | — | Buy/sell totals, unrealized P&L |
+| GET | `/history?days=30` | ✅ | — | Historical snapshots (7–365 days) |
+| POST | `/snapshot` | ✅ | — | Manual snapshot trigger |
+| GET | `/leaderboard?period=1&top=50` | ❌ | `leaderboard` 10/min | Top traders by P&L% — [AllowAnonymous] |
 
 ### Watchlist (`/api/Watchlist`) — `WatchlistController` (all `[Authorize]`)
 | Method | Route | Description |
@@ -455,6 +557,31 @@ string Image; DateTime LastUpdated;
 | GET | `/` | All user alerts (ordered by createdAt desc) |
 | POST | `/` | Create alert |
 | DELETE | `/{id}` | Hard delete alert |
+
+### Order (`/api/Order`) — `OrderController` (all `[Authorize]`)
+| Method | Route | Description |
+|---|---|---|
+| GET | `/` | All user orders (pending + filled + cancelled) |
+| POST | `/` | Create order (StopLoss / TakeProfit / Limit) |
+| DELETE | `/{id}` | Cancel pending order |
+
+### Position (`/api/Position`) — `PositionController` (all `[Authorize]`)
+| Method | Route | Description |
+|---|---|---|
+| GET | `/` | All user positions (open + closed + liquidated) |
+| POST | `/` | Open position (deducts collateral from fiat balance) |
+| DELETE | `/{id}` | Close open position (returns collateral + PnL, min 0) |
+
+### OnChainWallet (`/api/OnChainWallet`) — `OnChainWalletController` (all `[Authorize]`)
+| Method | Route | Description |
+|---|---|---|
+| GET | `/` | All user on-chain wallets |
+| POST | `/` | Add wallet (EVM address regex validation) |
+| POST | `/{id}/sync` | Sync native + ERC-20 balances via Alchemy JSON-RPC |
+| DELETE | `/{id}` | Remove wallet |
+
+### Crypto (`/api/Crypto`) — `CryptoController`
+All endpoints now have `[EnableRateLimiting("crypto")]` — 30 req/min per IP.
 
 ---
 
@@ -495,34 +622,80 @@ string Image; DateTime LastUpdated;
 - Wraps CoinGecko API with retry (exponential backoff + jitter) + circuit breaker (5 failures → 30s break)
 - `MemoryCryptoPriceCache`: in-memory cache refreshed by `CryptoPriceRefreshService` background service
 
+### `OrderService`
+- **CreateOrder**: validates wallet ownership; persists with `Status=Pending`
+- **CancelOrder**: ownership check; only Pending orders can be cancelled
+- `OrderMonitorBackgroundService` polls every 5 s; uses `OrderTriggerEvaluator.IsTriggered(order, price)`:
+  - `StopLoss Buy`: triggers when `price <= triggerPrice`
+  - `StopLoss Sell`: triggers when `price >= triggerPrice`
+  - `TakeProfit Buy`: triggers when `price >= triggerPrice`
+  - `TakeProfit Sell`: triggers when `price <= triggerPrice`
+  - `Limit Buy`: triggers when `price <= triggerPrice`
+  - `Limit Sell`: triggers when `price >= triggerPrice`
+  - On trigger: executes transaction (deducts/adds fiat), sets `Status=Filled`, records `FilledAt + FilledPrice`
+- `OrderTriggerEvaluator` is a **pure static class** — no DB/DI dependencies — for isolated unit testing
+
+### `PositionService`
+- **OpenPosition**: collateral = (entryPrice × quantity) / leverage; deducted from `FiatBalance`
+- **ClosePosition**: `PnL = (exitPrice - entryPrice) × quantity × side_sign`; returns `max(0, collateral + PnL)` to `FiatBalance`
+- **Live enrichment**: open positions get `currentPrice`, `unrealizedPnL`, `unrealizedPnLPercentage`, `marginRatio` from `ICryptoPriceCache`
+- `LiquidationBackgroundService` polls every 10 s; compares current price against `LiquidationPrice`; collateral fully lost on liquidation (`FiatBalance` unchanged)
+- `MaintenanceMarginRate = 5%`
+
+### `OnChainWalletService`
+- Calls Alchemy JSON-RPC (`eth_getBalance`, `alchemy_getTokenBalances`) per chain
+- Multi-chain URL routing: ethereum/arbitrum → mainnet, polygon → polygon-mainnet, bsc → bnb-mainnet
+- Deserializes `TokensJson` string column to `List<TokenBalance>` in response mapping
+- If `Alchemy:ApiKey` is blank, sync returns 0 balances without error
+
 ---
 
 ## Backend DI Registration (`Program.cs`)
 
 ```csharp
 // Scoped services
-IApplicationDbContext → ApplicationDbContext
-IJwtService          → JwtService
-IAuthService         → AuthService
-IWalletService       → WalletService
-ITransactionService  → TransactionService
-IPortfolioService    → PortfolioService
-IWatchlistService    → WatchlistService
-IPriceAlertService   → PriceAlertService
+IApplicationDbContext    → ApplicationDbContext
+IJwtService              → JwtService
+IAuthService             → AuthService
+IWalletService           → WalletService
+ITransactionService      → TransactionService
+IPortfolioService        → PortfolioService
+IWatchlistService        → WatchlistService
+IPriceAlertService       → PriceAlertService
+IOrderService            → OrderService            ← NEW
+IPositionService         → PositionService         ← NEW
+IOnChainWalletService    → OnChainWalletService    ← NEW
 
 // Singleton
-ICryptoPriceCache    → MemoryCryptoPriceCache
+ICryptoPriceCache        → MemoryCryptoPriceCache
 
 // HttpClient (ICryptoService → CryptoService) with Polly retry + circuit breaker
 
+// Options
+builder.Services.Configure<AlchemyOptions>(config.GetSection("Alchemy"))  ← NEW
+
 // Hosted Services
-CryptoPriceRefreshService           // background price polling
-PortfolioSnapshotBackgroundService  // midnight UTC daily snapshots
+CryptoPriceRefreshService              // background price polling
+PortfolioSnapshotBackgroundService     // midnight UTC daily snapshots
+OrderMonitorBackgroundService          // 5s poll — fills triggered orders  ← NEW
+LiquidationBackgroundService           // 10s poll — liquidates positions   ← NEW
+
+// Rate Limiter (ASP.NET Core built-in)                                     ← NEW
+// "crypto"      → FixedWindowLimiter: 30 req/min per IP
+// "leaderboard" → FixedWindowLimiter: 10 req/min per IP
+
+// Health Checks                                                             ← NEW
+// /health/live  → liveness (always 200)
+// /health/ready → readiness (Npgsql DB check)
+
+// Serilog structured logging: Console + rolling file sink (logs/log-.txt)  ← NEW
 
 // FluentValidation auto-validation
 // Swagger + Bearer auth definition
 // CORS: dev=any origin; prod=Cors:AllowedOrigins from config
 // GlobalExceptionHandlerMiddleware
+
+// Auto EF migrations on startup (if RunMigrationsOnStartup=true)           ← NEW
 ```
 
 ---
@@ -560,6 +733,22 @@ PortfolioSnapshotBackgroundService  // midnight UTC daily snapshots
 - All labels, validation messages, and placeholders are in Vietnamese
 - Error alert style: `rounded-xl bg-red-500/10 border border-red-500/20 text-red-400`
 
+### MetaMask / On-Chain
+- `useMetaMask` uses raw `window.ethereum` — no ethers.js/wagmi dependency
+- Extend Window type: `declare global { interface Window { ethereum?: EthereumProvider } }`
+- `connect()` calls `eth_requestAccounts` → returns first account
+- Listens to `accountsChanged` + `chainChanged` events for live updates
+- EVM address validation regex: `/^0x[a-fA-F0-9]{40}$/`
+
+### Orders / Positions
+- `OrderTriggerEvaluator` is a pure static class — zero DB/DI dependencies — test without mocks
+- Position `id` must be used as React key on trade cards (not `coinId` — user can open multiple positions for same coin)
+- Background services (`OrderMonitorBackgroundService`, `LiquidationBackgroundService`) use `IServiceScopeFactory` to create scoped DB context per polling cycle
+
+### Leaderboard
+- `html-to-image` `toPng()` — pass `{ cacheBust: true, backgroundColor: '#111827' }` to prevent CORS issues with external images
+- Leaderboard endpoint is `[AllowAnonymous]` — anyone can view rankings without login
+
 ---
 
 ## Watchlist Sync Flow
@@ -574,7 +763,7 @@ if (items.length > 0) syncMut.mutate(items)  // POST /Watchlist/sync
 
 ---
 
-## Build Status (as of 2026-05-15)
+## Build Status (as of 2026-05-16)
 
 ```
 ✓ built in 12.01s
@@ -585,6 +774,89 @@ dist/assets/vendor-charts-*.js       268.53 kB │ gzip: 75.70 kB
 dist/assets/vendor-react-*.js        138.14 kB │ gzip: 44.20 kB
 ```
 Backend: `dotnet build` → 0 errors, 1 warning (NuGet version mismatch in Tests project — benign).
+Tests: `dotnet test` → **100 tests passed** (was 55 before 2026-05-16 session).
+
+---
+
+## Test Coverage
+
+```
+CryptoDashboard.Tests/
+  Services/
+    AuthServiceTests.cs              ← login, register, JWT, refresh token
+    WalletServiceTests.cs            ← deposit, transfer, holdings
+    TransactionServiceTests.cs       ← buy/sell balance integrity, soft-delete reversal (7 tests)
+    PortfolioServiceTests.cs         ← snapshot idempotency, history forward-fill
+    WatchlistServiceTests.cs         ← add, sync, soft-delete
+    PriceAlertServiceTests.cs        ← create, delete, ownership
+    OrderServiceTests.cs             ← CRUD, cross-user isolation (7 tests)
+    OrderTriggerEvaluatorTests.cs    ← 18 Theory tests: all 6 type×side combos × triggered/not/edge
+    PositionServiceTests.cs          ← liquidation math, PnL, collateral, ownership (13 tests)
+```
+- Total: **100 tests**, all green
+- `OrderTriggerEvaluatorTests` uses `[Theory][InlineData]` — pure function, no mocks needed
+- DB tests use EF Core `InMemoryDatabase`; soft-delete tests call `.IgnoreQueryFilters()` to verify IsDeleted=true
+
+---
+
+## Production Infrastructure
+
+### Serilog Structured Logging
+- Console sink (JSON-like) + rolling file sink → `logs/log-YYYYMMDD.txt` (7-day retention)
+- Minimum level: `Information`; `Microsoft.AspNetCore` → `Warning` to suppress noise
+- Configured in `Program.cs` via `UseSerilog()` before `builder.Build()`
+- `appsettings.json` section:
+  ```json
+  "Serilog": { "MinimumLevel": { "Default": "Information", "Override": { "Microsoft.AspNetCore": "Warning" } } }
+  ```
+
+### Rate Limiting (ASP.NET Core built-in)
+- Policy `"crypto"`: 30 req/min per IP (FixedWindow) — applied on all `CryptoController` endpoints
+- Policy `"leaderboard"`: 10 req/min per IP (FixedWindow) — applied on `GET /portfolio/leaderboard`
+- On limit exceeded: returns `429 Too Many Requests`
+
+### Health Checks
+| Endpoint | Type | Description |
+|---|---|---|
+| `GET /health/live` | Liveness | Always 200 OK (app is running) |
+| `GET /health/ready` | Readiness | 200 if PostgreSQL responds, 503 if not |
+- NuGet: `AspNetCore.HealthChecks.NpgSql`
+- `Dockerfile` `HEALTHCHECK` hits `/health/live` every 30 s
+
+---
+
+## Docker & Deployment
+
+### Files
+| File | Purpose |
+|---|---|
+| `CryptoDashboard.Api/Dockerfile` | Multi-stage: `mcr.microsoft.com/dotnet/sdk:9.0` build → `aspnet:9.0` runtime; non-root user `app`; `HEALTHCHECK curl /health/live` |
+| `CryptoDashboard.Api/.dockerignore` | Excludes bin/, obj/, logs/, .env* |
+| `crypto-frontend/Dockerfile` | Multi-stage: `node:20-alpine` build → `nginx:1.27-alpine` serve |
+| `crypto-frontend/nginx.conf` | SPA `try_files` fallback, gzip, `Cache-Control: immutable` for `/assets/` |
+| `crypto-frontend/.dockerignore` | Excludes node_modules/, dist/, .env* |
+| `docker-compose.yml` | postgres + api + frontend; api waits on `postgres` healthcheck |
+| `.env.docker.example` | Template for local Docker env vars |
+| `render.yaml` | Render.com Blueprint — 1 Postgres + 2 Web services (Singapore region) |
+| `DEPLOY.md` | Step-by-step guide: local Docker compose + Render.com one-click deploy |
+
+### Local Docker (when Docker Desktop available)
+```bash
+cp .env.docker.example .env.docker
+# fill in JWT_SECRET_KEY (min 32 chars)
+docker compose --env-file .env.docker up --build
+# Frontend: http://localhost:5173    API: http://localhost:8080
+```
+
+### Render.com Blueprint (production)
+1. Push to GitHub main branch
+2. Render dashboard → "New +" → "Blueprint" → connect repo
+3. Render reads `render.yaml`, provisions Postgres + API + Frontend automatically
+4. After first deploy: set `Alchemy__ApiKey` in API service env vars (optional)
+- `Jwt__SecretKey` is auto-generated by Render (`generateValue: true`)
+- API runs on port 8080 (`ASPNETCORE_URLS=http://+:8080`)
+- Auto EF migrations: `RunMigrationsOnStartup=true`
+- CORS: frontend host injected via `fromService` reference
 
 ---
 
@@ -594,14 +866,7 @@ Backend: `dotnet build` → 0 errors, 1 warning (NuGet version mismatch in Tests
 - ✅ Week 2: Code splitting, React.lazy, ErrorBoundary, NotFoundPage
 - ✅ Week 3: Auth pages in Vietnamese, `.env.example`, index.html SEO, main.tsx config
 - ✅ Backend: `PUT /api/auth/profile` + `POST /api/Wallet/transfer` implemented
-- ⏳ **Next**: Backend deployment + hosting (requires user action — see Deployment section)
-
-## Deployment Checklist (when ready)
-
-1. **Frontend hosting**: Vercel / Netlify / Azure Static Web Apps (Vercel recommended for Vite)
-2. **Frontend env**: set `VITE_API_URL=https://api.your-domain.com` in hosting dashboard
-3. **Backend hosting**: Azure App Service / Railway / Render for .NET 9
-4. **Backend CORS**: add production frontend domain to `Cors:AllowedOrigins` in `appsettings.Production.json`
-5. **Backend HTTPS**: ensure production API runs HTTPS
-6. **JWT secrets**: set strong `Jwt:SecretKey` (min 32 chars) in production config
-7. **DB**: provision PostgreSQL (Supabase / Azure Database / Railway Postgres)
+- ✅ **Feature set 2**: Orders (Stop-loss/Take-profit/Limit) + Margin Positions + On-Chain Wallets + Leaderboard
+- ✅ **Production-ready infra**: Serilog, rate limiting, health checks, Docker, Render.com deploy
+- ✅ **Test suite**: 100 tests (was 55), including Theory tests for trigger logic
+- ⏳ **Next**: Complete Render.com deploy (user needs to sign up + connect GitHub repo)

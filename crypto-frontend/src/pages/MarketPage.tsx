@@ -283,6 +283,7 @@ function SkeletonRows() {
 }
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
+
 export function MarketPage() {
     const navigate = useNavigate()
     const { isWatched, toggle } = useWatchlist()
