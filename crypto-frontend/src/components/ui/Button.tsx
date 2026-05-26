@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import type { ButtonHTMLAttributes } from 'react'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: 'primary' | 'outline' | 'ghost'
+    variant?: 'primary' | 'outline' | 'ghost' | 'danger'
     size?: 'sm' | 'md' | 'lg'
     loading?: boolean
 }
@@ -22,36 +22,42 @@ export function Button({
             {...props}
             disabled={disabled || loading}
             className={cn(
-                'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2',
-                'dark:focus:ring-offset-gray-900',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'inline-flex items-center justify-center font-semibold transition-all duration-200',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan/50 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900',
+                'disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none',
+                'rounded-xl',
 
                 // Variants
                 variant === 'primary' && [
-                    'bg-brand-600 text-white hover:bg-brand-700',
-                    'dark:bg-brand-600 dark:hover:bg-brand-700',
+                    'bg-gradient-to-r from-accent-cyan to-accent-purple text-white',
+                    'hover:shadow-glow hover:brightness-110',
+                    'active:scale-[0.98]',
                 ],
                 variant === 'outline' && [
-                    'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
-                    'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700',
+                    'border border-white/10 bg-white/[0.03] text-gray-200',
+                    'hover:bg-white/[0.06] hover:border-white/20',
+                    'active:scale-[0.98]',
                 ],
                 variant === 'ghost' && [
-                    'text-gray-600 hover:bg-gray-100',
-                    'dark:text-gray-400 dark:hover:bg-gray-800',
+                    'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]',
+                ],
+                variant === 'danger' && [
+                    'bg-red-500/10 border border-red-500/20 text-red-400',
+                    'hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300',
+                    'active:scale-[0.98]',
                 ],
 
                 // Sizes
-                size === 'sm' && 'px-3 py-1.5 text-sm',
-                size === 'md' && 'px-4 py-2 text-sm',
-                size === 'lg' && 'px-6 py-3 text-base',
+                size === 'sm' && 'px-3 py-1.5 text-xs gap-1.5',
+                size === 'md' && 'px-4 py-2.5 text-sm gap-2',
+                size === 'lg' && 'px-6 py-3 text-base gap-2',
 
                 className,
             )}
         >
             {loading && (
                 <svg
-                    className="mr-2 h-4 w-4 animate-spin"
+                    className="h-4 w-4 animate-spin"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"

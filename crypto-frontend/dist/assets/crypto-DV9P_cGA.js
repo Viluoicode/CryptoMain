@@ -1,0 +1,1 @@
+import{k as o}from"./index-BVKhJ0Sj.js";async function n(t=50){const{data:a}=await o.get("/Crypto/top",{params:{limit:t}});return a}async function p(t){const{data:a}=await o.get(`/Crypto/${t}`);return a}export{p as a,n as g};

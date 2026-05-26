@@ -8,6 +8,7 @@ import {
 import {
     TrendingUp, TrendingDown, Wallet,
     ArrowUpRight, ArrowDownRight, BarChart2,
+    Calendar, Layers, PieChart,
 } from 'lucide-react'
 import { getPortfolioSummary, getPortfolioPerformance, getPortfolioHistory } from '@/api/portfolio'
 import { formatUSD, formatPct } from '@/lib/format'
@@ -15,6 +16,10 @@ import { cn } from '@/lib/utils'
 import type { PortfolioCoinAllocation } from '@/types'
 import { useLivePriceStore } from '@/store/livePriceStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { StatCard } from '@/components/ui/StatCard'
+import { Card } from '@/components/ui/Card'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 // ─── Day range options ─────────────────────────────────────────────────────────
 const DAY_OPTIONS = [
@@ -23,34 +28,6 @@ const DAY_OPTIONS = [
     { label: '3T',  value: 90  },
     { label: '1Y',  value: 365 },
 ]
-
-// ─── Stat Card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, positive, loading }: {
-    label: string
-    value: string
-    sub?: string
-    positive?: boolean
-    loading?: boolean
-}) {
-    return (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-colors duration-200">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">{label}</p>
-            {loading ? (
-                <div className="h-8 w-28 bg-gray-800 animate-pulse rounded-lg" />
-            ) : (
-                <p className={cn(
-                    'text-2xl font-bold font-mono',
-                    positive === true  ? 'text-emerald-400' :
-                    positive === false ? 'text-red-400' :
-                    'text-white',
-                )}>
-                    {value}
-                </p>
-            )}
-            {sub && <p className="text-xs text-gray-500 mt-1.5">{sub}</p>}
-        </div>
-    )
-}
 
 // ─── Performance mini card ─────────────────────────────────────────────────────
 function PerfCard({ label, value, sub, icon: Icon, iconColor, iconBg }: {
@@ -62,15 +39,15 @@ function PerfCard({ label, value, sub, icon: Icon, iconColor, iconBg }: {
     iconBg: string
 }) {
     return (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 hover:border-gray-700 transition-colors duration-200">
+        <div className="glass-card p-4 hover-glow transition-all duration-300 hover:border-white/[0.1]">
             <div className="flex items-center gap-2.5 mb-3">
-                <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center', iconBg)}>
+                <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center border border-white/[0.04]', iconBg)}>
                     <Icon size={14} className={iconColor} />
                 </div>
-                <span className="text-xs text-gray-500">{label}</span>
+                <span className="text-xs text-gray-500 font-medium">{label}</span>
             </div>
             <p className="text-lg font-bold text-white font-mono">{value}</p>
-            {sub && <p className="text-xs text-gray-600 mt-0.5">{sub}</p>}
+            {sub && <p className="text-[10px] text-gray-500 font-medium mt-1">{sub}</p>}
         </div>
     )
 }
@@ -83,13 +60,13 @@ function ChartTooltip({ active, payload, label }: {
 }) {
     if (!active || !payload?.length) return null
     return (
-        <div className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 shadow-xl text-xs space-y-1">
-            <p className="text-gray-400 mb-1.5">{label}</p>
+        <div className="bg-navy-900/95 border border-white/[0.08] rounded-xl px-3.5 py-3 shadow-glass backdrop-blur-xl text-xs space-y-1.5 animate-scale-in">
+            <p className="text-gray-400 font-medium mb-1.5">{label}</p>
             {payload.map((p) => (
                 <div key={p.name} className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
-                    <span className="text-gray-400">{p.name}:</span>
-                    <span className="font-semibold text-white font-mono">{formatUSD(p.value)}</span>
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse" style={{ background: p.color }} />
+                    <span className="text-gray-500 font-medium">{p.name}:</span>
+                    <span className="font-bold text-white font-mono">{formatUSD(p.value)}</span>
                 </div>
             ))}
         </div>
@@ -115,15 +92,15 @@ function HistoryChart({ days }: { days: number }) {
         return chartData[chartData.length - 1]['Giá trị'] >= chartData[0]['Giá trị']
     }, [chartData])
 
-    const strokeColor = positive ? '#4f46e5' : '#ef4444'
+    const strokeColor = positive ? '#0059FB' : '#f6465d' // Toobit Blue or Red
     const tickInterval = Math.max(1, Math.floor(chartData.length / 7) - 1)
 
-    if (isLoading) return <div className="h-56 bg-gray-800 animate-pulse rounded-xl" />
+    if (isLoading) return <div className="h-56 bg-navy-900/40 animate-pulse border border-white/[0.06] rounded-2xl" />
 
     if (!chartData.length) return (
         <div className="h-56 flex flex-col items-center justify-center gap-2 text-center">
             <BarChart2 size={28} className="text-gray-700" />
-            <p className="text-sm text-gray-500">Chưa có dữ liệu lịch sử</p>
+            <p className="text-sm text-gray-500 font-semibold">Chưa có dữ liệu lịch sử</p>
             <p className="text-xs text-gray-600">Snapshot được lưu mỗi ngày lúc 00:00 UTC</p>
         </div>
     )
@@ -133,19 +110,19 @@ function HistoryChart({ days }: { days: number }) {
             <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
                 <defs>
                     <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%"   stopColor={strokeColor} stopOpacity={0.2} />
+                        <stop offset="0%"   stopColor={strokeColor} stopOpacity={0.25} />
                         <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
                     </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
                 <XAxis
                     dataKey="date"
-                    tick={{ fontSize: 10, fill: '#6b7280' }}
+                    tick={{ fontSize: 10, fill: '#4b5563' }}
                     axisLine={false} tickLine={false}
                     interval={tickInterval}
                 />
                 <YAxis
-                    tick={{ fontSize: 10, fill: '#6b7280' }}
+                    tick={{ fontSize: 10, fill: '#4b5563' }}
                     axisLine={false} tickLine={false}
                     tickFormatter={(v: number) => v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${v.toFixed(0)}`}
                     width={58}
@@ -155,7 +132,7 @@ function HistoryChart({ days }: { days: number }) {
                     type="monotone"
                     dataKey="Giá trị"
                     stroke={strokeColor}
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     fill="url(#portfolioGrad)"
                     dot={false}
                     activeDot={{ r: 4, fill: strokeColor, strokeWidth: 0 }}
@@ -189,10 +166,10 @@ function CoinAvatar({ image, symbol, size = 8 }: { image: string; symbol: string
     }
     return (
         <div className={cn(
-            `w-${size} h-${size} rounded-full bg-indigo-600/20 border border-indigo-500/20`,
+            `w-${size} h-${size} rounded-full bg-gradient-to-br from-accent-cyan/20 to-accent-purple/20 border border-accent-cyan/15`,
             'flex items-center justify-center shrink-0',
         )}>
-            <span className="text-[9px] font-bold text-indigo-400 uppercase">
+            <span className="text-[9px] font-bold text-accent-cyan uppercase">
                 {symbol.slice(0, 2)}
             </span>
         </div>
@@ -205,30 +182,28 @@ function HoldingsTable({ allocations }: { allocations: PortfolioCoinAllocation[]
     const sorted = [...allocations].sort((a, b) => b.currentValue - a.currentValue)
 
     if (!sorted.length) return (
-        <div className="py-16 text-center">
-            <div className="w-14 h-14 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <BarChart2 size={22} className="text-gray-600" />
-            </div>
-            <p className="text-gray-400 font-medium mb-1">Chưa có holdings</p>
-            <p className="text-gray-600 text-sm">Thêm giao dịch Buy để bắt đầu</p>
-        </div>
+        <EmptyState
+            icon={<Layers size={20} />}
+            title="Chưa có holdings"
+            description="Thêm giao dịch Buy để bắt đầu"
+        />
     )
 
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="border-b border-gray-800">
-                        <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide pb-3 pl-1">Coin</th>
-                        <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wide pb-3">Số lượng</th>
-                        <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wide pb-3">Giá TB mua</th>
-                        <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wide pb-3">Giá hiện tại</th>
-                        <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wide pb-3">Giá trị</th>
-                        <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wide pb-3">P&amp;L</th>
-                        <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wide pb-3 pr-1">% Danh mục</th>
+                    <tr className="border-b border-white/[0.06] text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th className="text-left pb-3 pl-4 font-semibold">Coin</th>
+                        <th className="text-right pb-3 font-semibold">Số lượng</th>
+                        <th className="text-right pb-3 font-semibold">Giá TB mua</th>
+                        <th className="text-right pb-3 font-semibold">Giá hiện tại</th>
+                        <th className="text-right pb-3 font-semibold">Giá trị</th>
+                        <th className="text-right pb-3 font-semibold">P&amp;L</th>
+                        <th className="text-right pb-3 pr-4 font-semibold">% Danh mục</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800/60">
+                <tbody className="divide-y divide-white/[0.04]">
                     {sorted.map((coin) => {
                         // Prefer live Binance price over stale CoinGecko price
                         const liveTick    = ticks[coin.coinSymbol.toLowerCase()]
@@ -242,64 +217,64 @@ function HoldingsTable({ allocations }: { allocations: PortfolioCoinAllocation[]
                         return (
                             <tr
                                 key={coin.coinId}
-                                className="hover:bg-gray-800/30 transition-colors duration-150"
+                                className="hover:bg-white/[0.02] transition-colors duration-150"
                             >
                                 {/* Coin */}
-                                <td className="py-4 pl-1">
+                                <td className="py-4 pl-4">
                                     <div className="flex items-center gap-3">
                                         <CoinAvatar image={coin.image} symbol={coin.coinSymbol} size={8} />
                                         <div>
-                                            <p className="font-semibold text-white">{coin.coinName}</p>
-                                            <p className="text-xs text-gray-500 uppercase">{coin.coinSymbol}</p>
+                                            <p className="font-bold text-white text-sm">{coin.coinName}</p>
+                                            <p className="text-xs text-gray-500 font-semibold uppercase">{coin.coinSymbol}</p>
                                         </div>
                                     </div>
                                 </td>
 
                                 {/* Quantity */}
-                                <td className="py-4 text-right font-mono text-gray-300 text-xs">
+                                <td className="py-4 text-right font-mono text-gray-300 text-xs font-semibold">
                                     {coin.quantity.toFixed(6)}
                                 </td>
 
                                 {/* Avg buy */}
-                                <td className="py-4 text-right font-mono text-gray-400 text-xs">
+                                <td className="py-4 text-right font-mono text-gray-500 text-xs font-medium">
                                     {avgBuy > 0 ? formatUSD(avgBuy) : '—'}
                                 </td>
 
                                 {/* Current price — live if available */}
-                                <td className="py-4 text-right font-mono text-gray-200 text-xs">
-                                    <span className={liveTick ? 'text-white' : 'text-gray-400'}>
+                                <td className="py-4 text-right font-mono text-gray-300 text-xs font-semibold">
+                                    <span className={cn(liveTick ? 'text-white' : 'text-gray-400')}>
                                         {formatUSD(livePrice)}
                                     </span>
                                     {liveTick && connected && (
-                                        <span className="ml-1 text-emerald-500 text-[9px]">●</span>
+                                        <span className="ml-1.5 text-emerald-500 text-[8px] animate-pulse">●</span>
                                     )}
                                 </td>
 
                                 {/* Value — recomputed with live price */}
-                                <td className="py-4 text-right font-mono font-semibold text-white">
+                                <td className="py-4 text-right font-mono font-bold text-white">
                                     {formatUSD(liveValue)}
                                 </td>
 
                                 {/* P&L */}
                                 <td className="py-4 text-right">
-                                    <p className={cn('font-semibold font-mono text-sm', pos ? 'text-emerald-400' : 'text-red-400')}>
+                                    <p className={cn('font-bold font-mono text-sm', pos ? 'text-emerald-400' : 'text-red-400')}>
                                         {pos ? '+' : ''}{formatUSD(pnl)}
                                     </p>
-                                    <p className={cn('text-xs font-mono', pos ? 'text-emerald-500/70' : 'text-red-500/70')}>
+                                    <p className={cn('text-xs font-mono font-semibold', pos ? 'text-emerald-500/70' : 'text-red-500/70')}>
                                         {pos ? '+' : ''}{pnlPct.toFixed(2)}%
                                     </p>
                                 </td>
 
                                 {/* Allocation % */}
-                                <td className="py-4 pr-1">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <div className="w-14 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                <td className="py-4 pr-4">
+                                    <div className="flex items-center justify-end gap-2.5">
+                                        <div className="w-16 h-1.5 bg-navy-950/60 border border-white/[0.04] rounded-full overflow-hidden shrink-0">
                                             <div
-                                                className="h-full bg-indigo-500 rounded-full"
+                                                className="h-full bg-gradient-to-r from-accent-cyan to-accent-purple rounded-full"
                                                 style={{ width: `${Math.min(coin.allocationPercentage, 100)}%` }}
                                             />
                                         </div>
-                                        <span className="text-xs text-gray-400 font-mono w-10 text-right">
+                                        <span className="text-xs text-gray-400 font-mono font-bold w-10 text-right shrink-0">
                                             {coin.allocationPercentage.toFixed(1)}%
                                         </span>
                                     </div>
@@ -330,12 +305,14 @@ export function PortfolioPage() {
     const pnlPos = (summary?.totalProfitLoss ?? 0) >= 0
 
     return (
-        <div className="space-y-6 max-w-7xl">
+        <div className="space-y-6 max-w-7xl animate-fade-in">
 
             {/* ── Page header ── */}
             <div>
-                <h1 className="text-2xl font-bold text-white">Portfolio</h1>
-                <p className="text-sm text-gray-500 mt-0.5">Tổng quan danh mục đầu tư của bạn</p>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                    Portfolio
+                </h1>
+                <p className="text-sm text-gray-500 mt-1 font-medium">Tổng quan danh mục đầu tư của bạn</p>
             </div>
 
             {/* ── Row 1: 4 summary stat cards ── */}
@@ -345,25 +322,28 @@ export function PortfolioPage() {
                     value={summary ? formatUSD(summary.totalCurrentValue) : '—'}
                     sub={`${summary?.totalTransactionCount ?? 0} giao dịch`}
                     loading={loadingSummary}
+                    icon={<Wallet size={14} />}
                 />
                 <StatCard
                     label="Total P&L"
                     value={summary ? `${pnlPos ? '+' : ''}${formatUSD(summary.totalProfitLoss)}` : '—'}
-                    sub={summary ? formatPct(summary.totalProfitLossPercentage) : undefined}
-                    positive={pnlPos}
+                    trend={summary?.totalProfitLossPercentage}
                     loading={loadingSummary}
+                    icon={pnlPos ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                 />
                 <StatCard
                     label="Tổng đã đầu tư"
                     value={summary ? formatUSD(summary.totalInvestedValue) : '—'}
                     sub="Net buy - sell"
                     loading={loadingSummary}
+                    icon={<Layers size={14} />}
                 />
                 <StatCard
                     label="Số ví"
-                    value={String(summary?.walletCount ?? '—')}
+                    value={loadingSummary ? '—' : String(summary?.walletCount ?? 0)}
                     sub={`${summary?.allocations.length ?? 0} loại coin`}
                     loading={loadingSummary}
+                    icon={<PieChart size={14} />}
                 />
             </div>
 
@@ -376,7 +356,7 @@ export function PortfolioPage() {
                         sub={`${performance.totalBuyTransactions} lệnh`}
                         icon={ArrowDownRight}
                         iconColor="text-emerald-400"
-                        iconBg="bg-emerald-500/10"
+                        iconBg="bg-emerald-500/10 border-emerald-500/20"
                     />
                     <PerfCard
                         label="Tổng bán"
@@ -384,15 +364,15 @@ export function PortfolioPage() {
                         sub={`${performance.totalSellTransactions} lệnh`}
                         icon={ArrowUpRight}
                         iconColor="text-red-400"
-                        iconBg="bg-red-500/10"
+                        iconBg="bg-red-500/10 border-red-500/20"
                     />
                     <PerfCard
                         label="Net đầu tư"
                         value={formatUSD(performance.netInvested)}
                         sub="Buy - Sell"
                         icon={Wallet}
-                        iconColor="text-indigo-400"
-                        iconBg="bg-indigo-500/10"
+                        iconColor="text-cyan-400"
+                        iconBg="bg-cyan-500/10 border-cyan-500/20"
                     />
                     <PerfCard
                         label="Unrealized P&L"
@@ -400,19 +380,21 @@ export function PortfolioPage() {
                         sub={formatPct(performance.unrealizedProfitLossPercentage)}
                         icon={performance.unrealizedProfitLoss >= 0 ? TrendingUp : TrendingDown}
                         iconColor={performance.unrealizedProfitLoss >= 0 ? 'text-emerald-400' : 'text-red-400'}
-                        iconBg={performance.unrealizedProfitLoss >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'}
+                        iconBg={performance.unrealizedProfitLoss >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}
                     />
                 </div>
             )}
 
             {/* ── History Area Chart ── */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-5">
+            <Card className="p-5">
+                <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
                     <div>
-                        <h2 className="font-semibold text-white">Lịch sử giá trị Portfolio</h2>
-                        <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500">
+                        <h2 className="font-bold text-white text-sm flex items-center gap-2 uppercase tracking-wider">
+                            <Calendar size={14} className="text-accent-cyan" /> Lịch sử giá trị Portfolio
+                        </h2>
+                        <div className="flex items-center gap-4 mt-2 text-[10px] text-gray-500 font-bold uppercase">
                             <span className="flex items-center gap-1.5">
-                                <span className="w-5 h-0.5 bg-indigo-500 inline-block rounded" />
+                                <span className="w-5 h-0.5 bg-accent-cyan inline-block rounded" />
                                 Giá trị
                             </span>
                             <span className="flex items-center gap-1.5">
@@ -421,16 +403,16 @@ export function PortfolioPage() {
                             </span>
                         </div>
                     </div>
-                    <div className="flex gap-0.5 bg-gray-800 p-1 rounded-xl">
+                    <div className="flex gap-0.5 bg-navy-950 p-1 rounded-xl border border-white/[0.04]">
                         {DAY_OPTIONS.map(opt => (
                             <button
                                 key={opt.value}
                                 onClick={() => setHistoryDays(opt.value)}
                                 className={cn(
-                                    'px-3 py-1 text-xs font-medium rounded-lg transition-all duration-150',
+                                    'px-3 py-1 text-xs font-bold rounded-lg transition-all duration-150',
                                     historyDays === opt.value
-                                        ? 'bg-indigo-600 text-white shadow-sm'
-                                        : 'text-gray-400 hover:text-gray-200',
+                                        ? 'bg-gradient-to-r from-accent-cyan/20 to-accent-purple/20 text-accent-cyan border border-accent-cyan/35'
+                                        : 'text-gray-400 hover:text-white hover:bg-white/[0.02]',
                                 )}
                             >
                                 {opt.label}
@@ -439,28 +421,30 @@ export function PortfolioPage() {
                     </div>
                 </div>
                 <HistoryChart days={historyDays} />
-            </div>
+            </Card>
 
             {/* ── Holdings Table ── */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
-                    <h2 className="font-semibold text-white">Holdings</h2>
-                    <span className="text-xs text-gray-500 bg-gray-800 px-2.5 py-1 rounded-full">
+            <Card padding="none" className="overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                    <h2 className="font-bold text-white text-sm flex items-center gap-2 uppercase tracking-wider">
+                        <Layers size={14} className="text-accent-cyan" /> Holdings
+                    </h2>
+                    <span className="text-[10px] font-bold text-accent-cyan bg-accent-cyan/10 border border-accent-cyan/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
                         {summary?.allocations.length ?? 0} coin
                     </span>
                 </div>
                 {loadingSummary ? (
                     <div className="p-5 space-y-3">
                         {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="h-14 bg-gray-800 animate-pulse rounded-xl" />
+                            <Skeleton key={i} className="h-14 rounded-xl" />
                         ))}
                     </div>
                 ) : (
-                    <div className="px-5 py-2">
+                    <div className="py-2">
                         <HoldingsTable allocations={summary?.allocations ?? []} />
                     </div>
                 )}
-            </div>
+            </Card>
         </div>
     )
 }

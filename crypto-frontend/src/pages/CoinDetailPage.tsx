@@ -1,6 +1,6 @@
 // src/pages/CoinDetailPage.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
     createChart, CandlestickSeries, LineSeries, ColorType,
@@ -10,7 +10,7 @@ import type { ISeriesApi, IChartApi, IPriceLine, Time, LineData } from 'lightwei
 import { calcEMA, calcRSI, type OhlcBar, type RsiState } from '@/lib/indicators'
 import {
     ArrowLeft, TrendingUp, TrendingDown, Wallet,
-    Activity, BarChart3, DollarSign, ArrowUpDown, Bell, X,
+    Activity, BarChart3, DollarSign, ArrowUpDown, Bell,
 } from 'lucide-react'
 import { getCryptoById } from '@/api/crypto'
 import { apiClient } from '@/api/client'
@@ -25,14 +25,19 @@ import type { AlertDirection } from '@/types'
 import { formatUSD, formatPct } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { TransactionType } from '@/types'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Modal } from '@/components/ui/Modal'
+import { Skeleton } from '@/components/ui/Skeleton'
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+
 interface OhlcPoint { timestamp: number; open: number; high: number; low: number; close: number }
 type DayRange = 1 | 7 | 14 | 30 | 90
-
 interface OhlcDisplay { open: number; high: number; low: number; close: number; isUp: boolean }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
 async function getCoinOhlc(coinId: string, days: DayRange): Promise<OhlcPoint[]> {
     const { data } = await apiClient.get<OhlcPoint[]>(`/Crypto/${coinId}/ohlc`, { params: { days } })
     return data
@@ -46,23 +51,22 @@ function formatLarge(v: number): string {
 }
 
 const RANGES: { label: string; value: DayRange }[] = [
-    { label: '1N', value: 1 }, { label: '7N', value: 7 },
-    { label: '14N', value: 14 }, { label: '1T', value: 30 }, { label: '3T', value: 90 },
+    { label: '1D', value: 1 }, { label: '7D', value: 7 },
+    { label: '14D', value: 14 }, { label: '1M', value: 30 }, { label: '3M', value: 90 },
 ]
 
-// ─── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon: Icon, sub }: {
+function DetailStatCard({ label, value, icon: Icon, sub }: {
     label: string; value: string; icon: typeof Activity; sub?: string
 }) {
     return (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <Card className="p-4 hover-glow transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
-                <Icon size={13} className="text-gray-500" />
-                <span className="text-xs text-gray-500 uppercase tracking-wide">{label}</span>
+                <Icon size={14} className="text-gray-500" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</span>
             </div>
-            <p className="text-sm font-semibold text-white font-mono">{value}</p>
-            {sub && <p className="text-xs text-gray-600 mt-0.5">{sub}</p>}
-        </div>
+            <p className="text-lg font-bold text-white font-mono leading-none">{value}</p>
+            {sub && <p className="text-[10px] text-gray-500 mt-1 font-medium">{sub}</p>}
+        </Card>
     )
 }
 
@@ -97,28 +101,27 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
         staleTime: 1000 * 60 * 5,
     })
 
-    // ── Create chart once ──────────────────────────────────────────────────────
     useEffect(() => {
         if (!containerRef.current) return
 
         const chart = createChart(containerRef.current, {
             layout: {
-                background: { type: ColorType.Solid, color: '#111827' },
+                background: { type: ColorType.Solid, color: '#0b0e11' },
                 textColor:  '#6b7280',
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "Inter, system-ui, sans-serif",
             },
             grid: {
-                vertLines: { color: '#1f2937' },
-                horzLines: { color: '#1f2937' },
+                vertLines: { color: 'rgba(255,255,255,0.03)' },
+                horzLines: { color: 'rgba(255,255,255,0.03)' },
             },
             crosshair: {
                 mode: CrosshairMode.Normal,
-                vertLine: { color: '#4b5563', style: LineStyle.Dashed, width: 1 },
-                horzLine: { color: '#4b5563', style: LineStyle.Dashed, width: 1 },
+                vertLine: { color: 'rgba(0,89,251,0.3)', style: LineStyle.Dashed, width: 1 },
+                horzLine: { color: 'rgba(0,89,251,0.3)', style: LineStyle.Dashed, width: 1 },
             },
             rightPriceScale: {
                 borderVisible: false,
-                scaleMargins:  { top: 0.06, bottom: 0.26 },
+                scaleMargins:  { top: 0.08, bottom: 0.26 },
                 textColor:     '#6b7280',
             },
             timeScale: {
@@ -133,12 +136,12 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
         })
 
         const candle = chart.addSeries(CandlestickSeries, {
-            upColor:         '#10b981',
-            downColor:       '#ef4444',
-            borderUpColor:   '#10b981',
-            borderDownColor: '#ef4444',
-            wickUpColor:     '#10b981',
-            wickDownColor:   '#ef4444',
+            upColor:         '#03c076',
+            downColor:       '#f6465d',
+            borderUpColor:   '#03c076',
+            borderDownColor: '#f6465d',
+            wickUpColor:     '#03c076',
+            wickDownColor:   '#f6465d',
         })
 
         const makeEma = (color: string) => chart.addSeries(LineSeries, {
@@ -146,23 +149,23 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
             priceLineVisible: false, lastValueVisible: false,
             crosshairMarkerVisible: false, visible: false,
         })
-        const ema20  = makeEma('#facc15')
-        const ema50  = makeEma('#60a5fa')
-        const ema200 = makeEma('#f472b6')
+        const ema20  = makeEma('#eab308')
+        const ema50  = makeEma('#3b82f6')
+        const ema200 = makeEma('#ec4899')
 
         const rsi = chart.addSeries(LineSeries, {
-            color: '#a78bfa', lineWidth: 1,
+            color: '#8b5cf6', lineWidth: 1,
             priceScaleId: 'rsi',
             priceLineVisible: false, lastValueVisible: true,
             crosshairMarkerVisible: false, visible: false,
         })
         const rsiOb = chart.addSeries(LineSeries, {
-            color: '#ef444450', lineWidth: 1, lineStyle: LineStyle.Dashed,
+            color: 'rgba(239,68,68,0.25)', lineWidth: 1, lineStyle: LineStyle.Dashed,
             priceScaleId: 'rsi', priceLineVisible: false,
             lastValueVisible: false, crosshairMarkerVisible: false, visible: false,
         })
         const rsiOs = chart.addSeries(LineSeries, {
-            color: '#10b98150', lineWidth: 1, lineStyle: LineStyle.Dashed,
+            color: 'rgba(16,185,129,0.25)', lineWidth: 1, lineStyle: LineStyle.Dashed,
             priceScaleId: 'rsi', priceLineVisible: false,
             lastValueVisible: false, crosshairMarkerVisible: false, visible: false,
         })
@@ -209,24 +212,21 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
         }
     }, [])
 
-    // ── Sync EMA visibility ────────────────────────────────────────────────────
     useEffect(() => {
         ema20Ref.current?.applyOptions({ visible: emaVis.e20 })
         ema50Ref.current?.applyOptions({ visible: emaVis.e50 })
         ema200Ref.current?.applyOptions({ visible: emaVis.e200 })
     }, [emaVis])
 
-    // ── Sync RSI visibility + margins ─────────────────────────────────────────
     useEffect(() => {
         rsiRef.current?.applyOptions({ visible: showRSI })
         rsiObRef.current?.applyOptions({ visible: showRSI })
         rsiOsRef.current?.applyOptions({ visible: showRSI })
         chartRef.current?.priceScale('right').applyOptions({
-            scaleMargins: showRSI ? { top: 0.06, bottom: 0.26 } : { top: 0.06, bottom: 0.08 },
+            scaleMargins: showRSI ? { top: 0.08, bottom: 0.26 } : { top: 0.08, bottom: 0.08 },
         })
     }, [showRSI])
 
-    // ── Feed OHLC data + indicators ───────────────────────────────────────────
     useEffect(() => {
         if (!candleRef.current || !ohlcData?.length) return
 
@@ -238,13 +238,11 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
             .sort((a, b) => a.time - b.time)
             .filter((item, i, arr) => i === 0 || item.time !== arr[i - 1].time)
 
-        // Candles
         candleRef.current.setData(bars.map(b => ({
             time: b.time as Time, open: b.open, high: b.high, low: b.low, close: b.close,
         })))
         chartRef.current?.timeScale().fitContent()
 
-        // EMA
         const computeAndSet = (ref: React.RefObject<ISeriesApi<'Line'> | null>, period: number) => {
             const vals = calcEMA(bars, period)
             ref.current?.setData(
@@ -258,12 +256,10 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
         const lastE200 = computeAndSet(ema200Ref, 200)
         lastEMARef.current = { e20: lastE20, e50: lastE50, e200: lastE200 }
 
-        // Make EMA visible per toggle state
         ema20Ref.current?.applyOptions({ visible: emaVis.e20 })
         ema50Ref.current?.applyOptions({ visible: emaVis.e50 })
         ema200Ref.current?.applyOptions({ visible: emaVis.e200 })
 
-        // RSI
         const { values: rsiVals, state } = calcRSI(bars)
         rsiRef.current?.setData(
             bars.map((b, i) => ({ time: b.time as Time, value: rsiVals[i]! }))
@@ -275,25 +271,19 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
         rsiObRef.current?.applyOptions({ visible: showRSI })
         rsiOsRef.current?.applyOptions({ visible: showRSI })
         rsiStateRef.current = state
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ohlcData])
 
-    // ── Live price line + incremental indicator update ────────────────────────
     useEffect(() => {
         if (!candleRef.current || !livePrice) return
 
-        // Update live price line
         if (priceLineRef.current) {
             try { candleRef.current.removePriceLine(priceLineRef.current) } catch { /* */ }
         }
         priceLineRef.current = candleRef.current.createPriceLine({
-            price: livePrice, color: '#6366f1',
+            price: livePrice, color: '#0059FB',
             lineWidth: 1, lineStyle: LineStyle.Dashed,
             axisLabelVisible: true, title: '● LIVE',
         })
-
-        // EMA live update deferred — CoinDetail uses backend OHLC (not kline WS),
-        // so EMA reflects last closed bar. No incremental tick needed here.
 
         prevLiveRef.current = livePrice
     }, [livePrice])
@@ -302,52 +292,51 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
         setEmaVis(prev => ({ ...prev, [key]: !prev[key] }))
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
             {/* ── Toolbar ── */}
-            <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 {/* OHLC + indicator tooltip */}
-                <div className="flex items-center gap-2 text-xs font-mono min-h-[20px] flex-wrap">
+                <div className="flex items-center gap-3 text-xs font-mono min-h-[20px] flex-wrap">
                     {ohlc ? (
                         <>
-                            <span className="text-gray-500">O <span className="text-gray-300">{formatUSD(ohlc.open)}</span></span>
-                            <span className="text-gray-500">H <span className="text-emerald-400">{formatUSD(ohlc.high)}</span></span>
-                            <span className="text-gray-500">L <span className="text-red-400">{formatUSD(ohlc.low)}</span></span>
-                            <span className="text-gray-500">C <span className={ohlc.isUp ? 'text-emerald-400' : 'text-red-400'}>{formatUSD(ohlc.close)}</span></span>
-                            {emaTooltip?.e20  !== undefined && emaVis.e20  && <span className="text-yellow-400">EMA20 {formatUSD(emaTooltip.e20)}</span>}
-                            {emaTooltip?.e50  !== undefined && emaVis.e50  && <span className="text-blue-400">EMA50 {formatUSD(emaTooltip.e50)}</span>}
-                            {emaTooltip?.e200 !== undefined && emaVis.e200 && <span className="text-pink-400">EMA200 {formatUSD(emaTooltip.e200)}</span>}
+                            <span className="text-gray-500">O <span className="text-gray-300 font-semibold">{formatUSD(ohlc.open)}</span></span>
+                            <span className="text-gray-500">H <span className="text-profit font-semibold">{formatUSD(ohlc.high)}</span></span>
+                            <span className="text-gray-500">L <span className="text-loss font-semibold">{formatUSD(ohlc.low)}</span></span>
+                            <span className="text-gray-500">C <span className={ohlc.isUp ? 'text-profit font-semibold' : 'text-loss font-semibold'}>{formatUSD(ohlc.close)}</span></span>
+                            {emaTooltip?.e20  !== undefined && emaVis.e20  && <span className="text-yellow-400 font-semibold">EMA20 {formatUSD(emaTooltip.e20)}</span>}
+                            {emaTooltip?.e50  !== undefined && emaVis.e50  && <span className="text-blue-400 font-semibold">EMA50 {formatUSD(emaTooltip.e50)}</span>}
+                            {emaTooltip?.e200 !== undefined && emaVis.e200 && <span className="text-pink-400 font-semibold">EMA200 {formatUSD(emaTooltip.e200)}</span>}
                             {rsiTooltip !== null && showRSI && (
                                 <span className={cn(
-                                    'font-semibold',
-                                    rsiTooltip > 70 ? 'text-red-400' :
-                                    rsiTooltip < 30 ? 'text-emerald-400' : 'text-violet-400',
+                                    'font-bold',
+                                    rsiTooltip > 70 ? 'text-loss' :
+                                    rsiTooltip < 30 ? 'text-profit' : 'text-purple-400',
                                 )}>
                                     RSI {rsiTooltip.toFixed(1)}
                                 </span>
                             )}
                         </>
                     ) : (
-                        <span className="text-gray-700">Hover chart để xem OHLC</span>
+                        <span className="text-gray-500 font-semibold">Hover chart to inspect details</span>
                     )}
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-3.5 flex-wrap">
                     {/* EMA toggles */}
-                    <div className="flex items-center gap-1">
-                        <span className="text-[10px] text-gray-600 uppercase tracking-wider">EMA</span>
+                    <div className="flex items-center gap-1.5 bg-navy-950/60 p-0.5 rounded-lg border border-white/[0.04]">
                         {(
                             [
-                                { key: 'e20'  as const, label: '20',  cls: 'text-yellow-400 border-yellow-400/40' },
-                                { key: 'e50'  as const, label: '50',  cls: 'text-blue-400 border-blue-400/40'   },
-                                { key: 'e200' as const, label: '200', cls: 'text-pink-400 border-pink-400/40'   },
+                                { key: 'e20'  as const, label: 'EMA20',  cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' },
+                                { key: 'e50'  as const, label: 'EMA50',  cls: 'text-blue-400 bg-blue-500/10 border-blue-500/20'   },
+                                { key: 'e200' as const, label: 'EMA200', cls: 'text-pink-400 bg-pink-500/10 border-pink-500/20'   },
                             ]
                         ).map(({ key, label, cls }) => (
                             <button
                                 key={key}
                                 onClick={() => toggleEma(key)}
                                 className={cn(
-                                    'px-2 py-0.5 text-[11px] font-mono rounded border transition',
-                                    emaVis[key] ? cls : 'text-gray-600 border-gray-800 hover:border-gray-700',
+                                    'px-2.5 py-1 text-[10px] font-bold rounded-md border transition-all duration-200',
+                                    emaVis[key] ? cls : 'text-gray-500 border-transparent hover:text-gray-300',
                                 )}
                             >
                                 {label}
@@ -359,22 +348,22 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
                     <button
                         onClick={() => setShowRSI(v => !v)}
                         className={cn(
-                            'px-2 py-0.5 text-[11px] font-mono rounded border transition',
-                            showRSI ? 'text-violet-400 border-violet-400/40' : 'text-gray-600 border-gray-800 hover:border-gray-700',
+                            'px-2.5 py-1 text-[10px] font-bold rounded-md border transition-all duration-200',
+                            showRSI ? 'text-purple-450 bg-purple-500/10 border-purple-500/20 font-bold' : 'text-gray-500 border-transparent hover:text-gray-300 bg-navy-950/60 p-1 border border-white/[0.04]',
                         )}
                     >
                         RSI
                     </button>
 
                     {/* Timeframe */}
-                    <div className="flex gap-0.5 bg-gray-800 p-1 rounded-lg">
+                    <div className="flex gap-0.5 bg-navy-950/60 p-1 rounded-lg border border-white/[0.04]">
                         {RANGES.map(r => (
                             <button key={r.value} onClick={() => setDays(r.value)}
                                 className={cn(
-                                    'px-2.5 py-1 text-xs font-medium rounded-md transition-all',
+                                    'px-2.5 py-1 text-xs font-bold rounded-md transition-all duration-200',
                                     days === r.value
-                                        ? 'bg-indigo-600 text-white shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-300 hover:bg-gray-700',
+                                        ? 'bg-gradient-to-r from-accent-cyan/20 to-accent-purple/20 text-white border border-white/[0.08] shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-300',
                                 )}>
                                 {r.label}
                             </button>
@@ -384,12 +373,15 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
             </div>
 
             {/* ── Chart container ── */}
-            <div className="relative rounded-xl overflow-hidden border border-gray-800">
+            <div className="relative rounded-2xl overflow-hidden border border-white/[0.06] bg-navy-950">
                 {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90 z-10">
+                    <div className="absolute inset-0 flex items-center justify-center bg-navy-950/90 z-10">
                         <div className="flex items-center gap-2 text-gray-500 text-xs">
-                            <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                            Đang tải OHLC...
+                            <svg className="h-4 w-4 animate-spin text-accent-cyan" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                            </svg>
+                            Loading Chart data...
                         </div>
                     </div>
                 )}
@@ -397,50 +389,50 @@ function CandlestickChart({ coinId, livePrice }: { coinId: string; livePrice?: n
             </div>
 
             {/* ── Legend ── */}
-            <div className="flex items-center gap-4 text-[11px] flex-wrap">
+            <div className="flex items-center gap-4 text-[10px] font-semibold text-gray-500 flex-wrap uppercase tracking-wider">
                 {livePrice && (
-                    <span className="flex items-center gap-1.5 text-gray-600">
-                        <span className="w-5 h-px border-t border-dashed border-indigo-500" />
-                        <span className="text-indigo-400 font-mono">● LIVE {formatUSD(livePrice)}</span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="w-5 h-px border-t border-dashed border-accent-cyan" />
+                        <span className="text-accent-cyan font-mono">● LIVE {formatUSD(livePrice)}</span>
                     </span>
                 )}
-                {emaVis.e20  && <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-yellow-400 inline-block" />EMA 20</span>}
-                {emaVis.e50  && <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-blue-400 inline-block" />EMA 50</span>}
-                {emaVis.e200 && <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-pink-400 inline-block" />EMA 200</span>}
-                {showRSI     && <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-violet-400 inline-block" />RSI(14) · OB 70 / OS 30</span>}
+                {emaVis.e20  && <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-yellow-450 inline-block" />EMA 20</span>}
+                {emaVis.e50  && <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-blue-500 inline-block" />EMA 50</span>}
+                {emaVis.e200 && <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-pink-500 inline-block" />EMA 200</span>}
+                {showRSI     && <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-purple-500 inline-block" />RSI(14) · OB 70 / OS 30</span>}
             </div>
         </div>
     )
 }
 
-// ─── Login CTA ─────────────────────────────────────────────────────────────────
 function LoginCTA() {
     return (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center space-y-4">
-            <div className="w-12 h-12 bg-indigo-600/10 rounded-2xl flex items-center justify-center mx-auto">
-                <TrendingUp size={20} className="text-indigo-400" />
+        <Card className="p-6 text-center space-y-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-accent-cyan/10 to-accent-purple/10 border border-white/[0.06] rounded-2xl flex items-center justify-center mx-auto text-accent-cyan">
+                <TrendingUp size={20} />
             </div>
             <div>
-                <p className="font-semibold text-white mb-1">Đăng nhập để giao dịch</p>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                    Tạo tài khoản miễn phí để theo dõi và ghi lại giao dịch của bạn
+                <p className="font-bold text-white mb-1">Sign in to trade</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                    Create a free account to track and log your custom paper transactions.
                 </p>
             </div>
             <div className="space-y-2">
-                <a href="/register"
-                    className="block w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition text-center">
-                    Tạo tài khoản miễn phí
-                </a>
-                <a href="/login"
-                    className="block w-full py-2.5 border border-gray-700 text-gray-400 text-sm font-medium rounded-xl hover:bg-gray-800 transition text-center">
-                    Đăng nhập
-                </a>
+                <Link to="/register" className="block w-full">
+                    <Button variant="primary" size="md" className="w-full">
+                        Create Free Account
+                    </Button>
+                </Link>
+                <Link to="/login" className="block w-full">
+                    <Button variant="outline" size="md" className="w-full">
+                        Sign In
+                    </Button>
+                </Link>
             </div>
-        </div>
+        </Card>
     )
 }
 
-// ─── Trading Panel ─────────────────────────────────────────────────────────────
 function TradingPanel({ coinId, coinSymbol, currentPrice }: {
     coinId: string; coinSymbol: string; currentPrice: number
 }) {
@@ -454,7 +446,6 @@ function TradingPanel({ coinId, coinSymbol, currentPrice }: {
     const [notes, setNotes]       = useState('')
     const [success, setSuccess]   = useState(false)
 
-    // Sync price input when live price changes
     useEffect(() => {
         setPrice(currentPrice.toFixed(8))
     }, [currentPrice])
@@ -469,9 +460,6 @@ function TradingPanel({ coinId, coinSymbol, currentPrice }: {
     const exceedsHolding = isSell && parseFloat(quantity || '0') > holdingQty && holdingQty > 0
     const sellDisabled   = isSell && (cannotSell || exceedsHolding)
     const total          = parseFloat(quantity || '0') * parseFloat(price || '0')
-
-    const inputCls = "w-full border border-gray-700 bg-gray-800 text-white placeholder-gray-600 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition"
-    const labelCls = "block text-xs font-medium text-gray-500 mb-1.5"
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault()
@@ -497,151 +485,164 @@ function TradingPanel({ coinId, coinSymbol, currentPrice }: {
 
     if (wallets !== undefined && wallets.length === 0) {
         return (
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center space-y-3">
-                <div className="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center mx-auto">
-                    <Wallet size={18} className="text-indigo-400" />
+            <Card className="p-6 text-center space-y-4">
+                <div className="w-10 h-10 bg-accent-cyan/10 rounded-xl flex items-center justify-center mx-auto text-accent-cyan">
+                    <Wallet size={18} />
                 </div>
-                <p className="text-sm text-gray-500">Bạn chưa có ví nào.</p>
-                <button
+                <p className="text-xs text-gray-400">You don't have any wallets created.</p>
+                <Button
+                    variant="primary"
+                    size="sm"
                     onClick={() => navigate('/wallets')}
-                    className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition"
+                    className="w-full"
                 >
-                    Tạo ví ngay
-                </button>
-            </div>
+                    Create Wallet
+                </Button>
+            </Card>
         )
     }
 
+    const selectOptions = [
+        { value: '', label: '-- Choose Wallet --' },
+        ...(wallets?.map(w => ({ value: w.id, label: w.name })) ?? [])
+    ]
+
     return (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+        <Card className="p-0 overflow-hidden">
             {/* Buy / Sell tabs */}
-            <div className="grid grid-cols-2 border-b border-gray-800">
-                {([1, 2] as TransactionType[]).map(t => (
-                    <button key={t} type="button"
-                        onClick={() => { setType(t); setQuantity('') }}
-                        className={cn(
-                            'py-3 text-sm font-semibold transition',
-                            type === t
-                                ? t === 1 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-                                : 'bg-gray-800 text-gray-500 hover:bg-gray-700 hover:text-gray-300',
-                        )}>
-                        {t === 1 ? '▲ Buy' : '▼ Sell'}
-                    </button>
-                ))}
+            <div className="grid grid-cols-2 border-b border-white/[0.06] bg-navy-950/40">
+                <button
+                    type="button"
+                    onClick={() => { setType(1); setQuantity('') }}
+                    className={cn(
+                        'py-3.5 text-xs font-bold transition-all duration-200',
+                        type === 1
+                            ? 'bg-emerald-500/10 text-emerald-400 border-b-2 border-emerald-500'
+                            : 'text-gray-500 hover:text-gray-300',
+                    )}
+                >
+                    ▲ BUY
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setType(2); setQuantity('') }}
+                    className={cn(
+                        'py-3.5 text-xs font-bold transition-all duration-200',
+                        type === 2
+                            ? 'bg-red-500/10 text-red-400 border-b-2 border-red-500'
+                            : 'text-gray-500 hover:text-gray-300',
+                    )}
+                >
+                    ▼ SELL
+                </button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
                 {/* Wallet select */}
-                <div>
-                    <label className={labelCls}>Ví</label>
-                    <select
-                        value={walletId}
-                        onChange={e => { setWalletId(e.target.value); setQuantity('') }}
-                        className={cn(inputCls, 'bg-gray-800')}
-                    >
-                        <option value="">-- Chọn ví --</option>
-                        {wallets?.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                    </select>
-                </div>
+                <Select
+                    label="Wallet"
+                    options={selectOptions}
+                    value={walletId}
+                    onChange={e => { setWalletId(e.target.value); setQuantity('') }}
+                />
 
                 {/* Cannot sell alert */}
                 {cannotSell && (
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                        <p className="text-xs font-semibold text-red-400 mb-0.5">Không thể bán</p>
-                        <p className="text-xs text-red-400/70">Ví này không có <span className="uppercase font-medium">{coinSymbol}</span> nào.</p>
+                    <div className="bg-red-550/10 border border-red-500/20 rounded-xl px-4 py-3">
+                        <p className="text-xs font-bold text-red-400 mb-0.5">Unavailable to Sell</p>
+                        <p className="text-xs text-red-450/70">This wallet holds no <span className="uppercase font-semibold">{coinSymbol}</span>.</p>
                     </div>
                 )}
 
                 {/* Sell balance info */}
                 {isSell && !!walletId && holdingQty > 0 && (
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5 flex justify-between items-center">
-                        <span className="text-xs text-amber-400/70">Số dư trong ví</span>
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex justify-between items-center">
+                        <span className="text-xs text-amber-400/80 font-medium">Available balance</span>
                         <div className="text-right">
                             <p className="text-xs font-bold text-amber-300 font-mono">
                                 {holdingQty} <span className="uppercase">{coinSymbol}</span>
                             </p>
                             <button type="button" onClick={() => setQuantity(holdingQty.toString())}
-                                className="text-xs text-amber-500 hover:underline">
-                                Bán tất cả
+                                className="text-[10px] font-bold text-amber-400 hover:underline uppercase tracking-wide mt-0.5">
+                                Sell Max
                             </button>
                         </div>
                     </div>
                 )}
 
                 {/* Quantity */}
-                <div>
-                    <label className={labelCls}>Số lượng <span className="uppercase">{coinSymbol}</span></label>
-                    <input
-                        type="number" step="any" min="0"
-                        max={isSell && holdingQty > 0 ? holdingQty : undefined}
-                        placeholder="0.00" value={quantity} disabled={cannotSell}
-                        onChange={e => setQuantity(e.target.value)}
-                        className={cn(inputCls, exceedsHolding && 'border-red-500/50', cannotSell && 'opacity-50 cursor-not-allowed')}
-                    />
-                    {exceedsHolding && (
-                        <p className="text-xs text-red-400 mt-1">
-                            Vượt quá số dư. Tối đa: {holdingQty} <span className="uppercase">{coinSymbol}</span>
-                        </p>
-                    )}
-                </div>
+                <Input
+                    label={`Amount (${coinSymbol.toUpperCase()})`}
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="0.00"
+                    value={quantity}
+                    disabled={cannotSell}
+                    onChange={e => setQuantity(e.target.value)}
+                    error={exceedsHolding ? `Exceeds wallet balance. Max: ${holdingQty}` : undefined}
+                />
 
                 {/* Price */}
-                <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-medium text-gray-500">Giá / coin (USD)</label>
-                        <button type="button"
+                <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-300">Price Per Coin (USD)</label>
+                        <button
+                            type="button"
                             onClick={() => setPrice(currentPrice.toFixed(8))}
-                            className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline">
-                            Dùng giá live
+                            className="text-xs font-semibold text-accent-cyan hover:underline"
+                        >
+                            Use Live Price
                         </button>
                     </div>
-                    <input type="number" step="any" min="0"
-                        value={price} onChange={e => setPrice(e.target.value)}
-                        className={inputCls} />
+                    <Input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={price}
+                        onChange={e => setPrice(e.target.value)}
+                    />
                 </div>
 
                 {/* Total */}
                 {total > 0 && (
-                    <div className="bg-gray-800 rounded-xl px-4 py-3 flex justify-between items-center">
-                        <span className="text-xs text-gray-500">Tổng giá trị</span>
+                    <div className="bg-navy-950/40 border border-white/[0.04] rounded-xl px-4 py-3.5 flex justify-between items-center">
+                        <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Value</span>
                         <span className="text-sm font-bold text-white font-mono">{formatUSD(total)}</span>
                     </div>
                 )}
 
                 {/* Notes */}
-                <div>
-                    <label className={labelCls}>Ghi chú (tuỳ chọn)</label>
-                    <input type="text" placeholder="Ghi chú..." value={notes}
-                        onChange={e => setNotes(e.target.value)} className={inputCls} />
-                </div>
+                <Input
+                    label="Notes (Optional)"
+                    type="text"
+                    placeholder="Trade memo..."
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                />
 
                 {/* Success */}
                 {success && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl px-4 py-2.5 text-center font-medium">
-                        ✅ Giao dịch đã được ghi lại!
-                    </div>
+                    <Badge variant="success" className="w-full justify-center py-2 text-xs font-semibold">
+                        ✅ Transaction recorded successfully!
+                    </Badge>
                 )}
 
-                <button
+                <Button
                     type="submit"
                     disabled={!walletId || !quantity || !price || isPending || sellDisabled}
-                    className={cn(
-                        'w-full py-3 text-sm font-semibold rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed',
-                        type === 1
-                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                            : 'bg-red-500 hover:bg-red-600 text-white',
-                    )}
+                    variant={type === 1 ? 'primary' : 'danger'}
+                    className="w-full py-3"
                 >
-                    {isPending ? 'Đang xử lý...' : type === 1
-                        ? `Mua ${coinSymbol.toUpperCase()}`
-                        : `Bán ${coinSymbol.toUpperCase()}`}
-                </button>
+                    {isPending ? 'Processing...' : type === 1
+                        ? `Buy ${coinSymbol.toUpperCase()}`
+                        : `Sell ${coinSymbol.toUpperCase()}`}
+                </Button>
             </form>
-        </div>
+        </Card>
     )
 }
 
-// ─── Set Alert Modal ───────────────────────────────────────────────────────────
 function SetAlertModal({ coinId, coinSymbol, coinName, currentPrice, onClose }: {
     coinId: string; coinSymbol: string; coinName: string; currentPrice: number; onClose: () => void
 }) {
@@ -652,7 +653,6 @@ function SetAlertModal({ coinId, coinSymbol, coinName, currentPrice, onClose }: 
     const createAlert = useCreateAlert()
     const toast = useToast()
 
-    // Suggest price when direction changes
     const handleDirectionChange = (d: AlertDirection) => {
         setDirection(d)
         setTargetPrice((currentPrice * (d === 1 ? 1.05 : 0.95)).toFixed(2))
@@ -667,122 +667,107 @@ function SetAlertModal({ coinId, coinSymbol, coinName, currentPrice, onClose }: 
             { coinId, coinSymbol, coinName, targetPrice: price, direction },
             {
                 onSuccess: () => {
-                    toast.success(`Alert đã đặt!`, `${coinSymbol.toUpperCase()} ${direction === 1 ? '≥' : '≤'} $${price.toLocaleString()}`)
+                    toast.success(`Alert set!`, `${coinSymbol.toUpperCase()} ${direction === 1 ? '≥' : '≤'} $${price.toLocaleString()}`)
                     onClose()
                 },
-                onError: () => toast.error('Không thể tạo alert'),
+                onError: () => toast.error('Failed to set price alert'),
             }
         )
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl w-full max-w-sm">
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-                    <div className="flex items-center gap-2">
-                        <Bell size={16} className="text-amber-400" />
-                        <span className="font-semibold text-white text-sm">Đặt Price Alert</span>
+        <Modal open={true} onClose={onClose} title="Set Price Alert">
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Coin info */}
+                <div className="bg-navy-950/40 border border-white/[0.04] rounded-xl px-4 py-3 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Asset</p>
+                        <p className="text-sm font-bold text-white uppercase">{coinSymbol} · {coinName}</p>
                     </div>
-                    <button onClick={onClose} className="text-gray-500 hover:text-white transition">
-                        <X size={16} />
-                    </button>
+                    <div className="text-right">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Market Price</p>
+                        <p className="text-sm font-bold font-mono text-white">{formatUSD(currentPrice)}</p>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-5 space-y-4">
-                    {/* Coin info */}
-                    <div className="bg-gray-800 rounded-xl px-4 py-3 flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-gray-500 mb-0.5">Coin</p>
-                            <p className="text-sm font-semibold text-white uppercase">{coinSymbol} · {coinName}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xs text-gray-500 mb-0.5">Giá hiện tại</p>
-                            <p className="text-sm font-mono text-white">{formatUSD(currentPrice)}</p>
-                        </div>
+                {/* Direction */}
+                <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Trigger Condition</label>
+                    <div className="grid grid-cols-2 gap-3">
+                        {([1, 2] as AlertDirection[]).map(d => (
+                            <button
+                                key={d}
+                                type="button"
+                                onClick={() => handleDirectionChange(d)}
+                                className={cn(
+                                    'flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold border transition-all duration-200',
+                                    direction === d
+                                        ? d === 1
+                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                            : 'bg-red-500/10 border-red-500/30 text-red-400'
+                                        : 'bg-white/[0.03] border-white/[0.08] text-gray-500 hover:text-gray-300',
+                                )}
+                            >
+                                {d === 1
+                                    ? <><TrendingUp size={14} /> ABOVE (≥)</>
+                                    : <><TrendingDown size={14} /> BELOW (≤)</>}
+                            </button>
+                        ))}
                     </div>
+                </div>
 
-                    {/* Direction */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-2">Điều kiện trigger</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {([1, 2] as AlertDirection[]).map(d => (
-                                <button
-                                    key={d}
-                                    type="button"
-                                    onClick={() => handleDirectionChange(d)}
-                                    className={cn(
-                                        'flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition',
-                                        direction === d
-                                            ? d === 1
-                                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                                                : 'bg-red-500/20 border-red-500/40 text-red-400'
-                                            : 'bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600',
-                                    )}
-                                >
-                                    {d === 1
-                                        ? <><TrendingUp size={14} /> Trên (≥)</>
-                                        : <><TrendingDown size={14} /> Dưới (≤)</>}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                {/* Target price */}
+                <div className="space-y-1.5">
+                    <Input
+                        label="Target Price (USD)"
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={targetPrice}
+                        onChange={e => setTargetPrice(e.target.value)}
+                        placeholder="0.00"
+                    />
+                    {parseFloat(targetPrice) > 0 && (
+                        <p className="text-xs text-gray-500 font-semibold font-mono">
+                            {(() => {
+                                const pct = ((parseFloat(targetPrice) - currentPrice) / currentPrice) * 100
+                                return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% difference from current price`
+                            })()}
+                        </p>
+                    )}
+                </div>
 
-                    {/* Target price */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                            Giá mục tiêu (USD)
-                        </label>
-                        <input
-                            type="number"
-                            step="any"
-                            min="0"
-                            value={targetPrice}
-                            onChange={e => setTargetPrice(e.target.value)}
-                            className="w-full border border-gray-700 bg-gray-800 text-white placeholder-gray-600 rounded-xl px-3 py-2.5 text-sm font-mono outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition"
-                            placeholder="0.00"
-                        />
-                        {/* Percent difference hint */}
-                        {parseFloat(targetPrice) > 0 && (
-                            <p className="text-xs text-gray-600 mt-1">
-                                {(() => {
-                                    const pct = ((parseFloat(targetPrice) - currentPrice) / currentPrice) * 100
-                                    return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% so với giá hiện tại`
-                                })()}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-1">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 py-2.5 text-sm font-medium rounded-xl border border-gray-700 text-gray-400 hover:bg-gray-800 transition"
-                        >
-                            Huỷ
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={createAlert.isPending || !targetPrice || parseFloat(targetPrice) <= 0}
-                            className="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-50 transition"
-                        >
-                            {createAlert.isPending ? 'Đang tạo...' : '🔔 Đặt Alert'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                {/* Actions */}
+                <div className="flex gap-3 pt-2">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="md"
+                        onClick={onClose}
+                        className="flex-1"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        disabled={createAlert.isPending || !targetPrice || parseFloat(targetPrice) <= 0}
+                        variant="primary"
+                        size="md"
+                        className="flex-1"
+                    >
+                        {createAlert.isPending ? 'Setting Alert...' : 'Set Alert'}
+                    </Button>
+                </div>
+            </form>
+        </Modal>
     )
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
 export function CoinDetailPage() {
     const { coinId } = useParams<{ coinId: string }>()
     const navigate   = useNavigate()
     const { isAuthenticated } = useAuth()
 
-    // CoinGecko snapshot
     const { data: coin, isLoading, isError } = useQuery({
         queryKey: ['crypto', coinId],
         queryFn: () => getCryptoById(coinId!),
@@ -790,21 +775,17 @@ export function CoinDetailPage() {
         staleTime: 1000 * 60 * 2,
     })
 
-    // Binance WebSocket — live price for this coin
     const symbol = coin?.symbol?.toLowerCase() ?? ''
     useBinanceWs(symbol ? [symbol] : [])
     const { ticks } = useLivePriceStore()
     const liveTick = symbol ? ticks[symbol] : undefined
 
-    // Resolved price (live takes priority)
     const livePrice  = liveTick?.price    ?? coin?.currentPrice
     const liveChange = liveTick?.change24h ?? coin?.priceChangePercentage24h ?? 0
     const liveHigh   = liveTick?.high24h
     const liveLow    = liveTick?.low24h
 
     const [alertOpen, setAlertOpen] = useState(false)
-
-    // ── Price flash in header ──────────────────────────────────────────────────
     const prevPriceRef = useRef<number>(livePrice ?? 0)
     const [flash, setFlash] = useState<'up' | 'down' | null>(null)
 
@@ -818,21 +799,23 @@ export function CoinDetailPage() {
         return () => clearTimeout(t)
     }, [liveTick?.price])
 
-    // ── Loading ────────────────────────────────────────────────────────────────
     if (isLoading) {
         return (
-            <div className="max-w-7xl space-y-5">
-                <div className="h-10 w-64 bg-gray-800 animate-pulse rounded-xl" />
+            <div className="max-w-7xl space-y-6">
+                <div className="flex items-center gap-3">
+                    <Skeleton className="w-9 h-9 rounded-xl" />
+                    <Skeleton className="h-5 w-48 rounded" />
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-4">
-                        <div className="h-[520px] bg-gray-900 border border-gray-800 animate-pulse rounded-2xl" />
-                        <div className="grid grid-cols-4 gap-3">
+                    <div className="lg:col-span-2 space-y-5">
+                        <Skeleton className="h-[520px] rounded-2xl" />
+                        <div className="grid grid-cols-4 gap-4">
                             {Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="h-20 bg-gray-900 border border-gray-800 animate-pulse rounded-xl" />
+                                <Skeleton key={i} className="h-20 rounded-xl" />
                             ))}
                         </div>
                     </div>
-                    <div className="h-96 bg-gray-900 border border-gray-800 animate-pulse rounded-2xl" />
+                    <Skeleton className="h-96 rounded-2xl" />
                 </div>
             </div>
         )
@@ -840,11 +823,11 @@ export function CoinDetailPage() {
 
     if (isError || !coin) {
         return (
-            <div className="text-center py-20 text-gray-500 text-sm">
-                Không tìm thấy coin.{' '}
-                <button onClick={() => navigate('/market')} className="text-indigo-400 hover:underline">
-                    Quay lại Market
-                </button>
+            <div className="text-center py-20 text-gray-505">
+                <p className="text-sm font-semibold text-gray-400 mb-3">Asset detail could not be retrieved.</p>
+                <Button variant="outline" size="sm" onClick={() => navigate('/market')}>
+                    Back to Market
+                </Button>
             </div>
         )
     }
@@ -852,13 +835,12 @@ export function CoinDetailPage() {
     const positive = liveChange >= 0
 
     return (
-        <div className="space-y-6 max-w-7xl">
-
+        <div className="space-y-6 max-w-7xl animate-fade-in">
             {/* ── Header ── */}
             <div className="flex items-center gap-4 flex-wrap">
                 <button
                     onClick={() => navigate('/market')}
-                    className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-800 text-gray-500 hover:bg-gray-800 hover:text-white transition shrink-0"
+                    className="w-9 h-9 flex items-center justify-center rounded-xl border border-white/[0.08] text-gray-500 hover:bg-white/[0.05] hover:text-white transition shrink-0"
                 >
                     <ArrowLeft size={16} />
                 </button>
@@ -867,22 +849,22 @@ export function CoinDetailPage() {
 
                 <div>
                     <h1 className="text-xl font-bold text-white leading-tight">{coin.name}</h1>
-                    <span className="text-xs text-gray-500 uppercase">{coin.symbol}</span>
+                    <span className="text-xs text-gray-500 uppercase font-semibold">{coin.symbol}</span>
                 </div>
 
                 {/* Live price display */}
-                <div className="flex items-center gap-3 ml-1">
+                <div className="flex items-center gap-3 ml-2">
                     <span className={cn(
                         'text-2xl font-bold font-mono transition-colors duration-500',
-                        flash === 'up'   ? 'text-emerald-400' :
-                        flash === 'down' ? 'text-red-400' : 'text-white',
+                        flash === 'up'   ? 'text-profit' :
+                        flash === 'down' ? 'text-loss' : 'text-white',
                     )}>
                         {livePrice ? formatUSD(livePrice) : '—'}
                     </span>
 
                     <span className={cn(
-                        'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full',
-                        positive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400',
+                        'flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border border-current/10',
+                        positive ? 'text-profit bg-profit/10' : 'text-loss bg-loss/10',
                     )}>
                         {positive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                         {formatPct(liveChange)}
@@ -890,22 +872,21 @@ export function CoinDetailPage() {
 
                     {/* Live badge */}
                     {liveTick && (
-                        <span className="flex items-center gap-1 text-xs text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            LIVE
-                        </span>
+                        <Badge variant="success" dot>LIVE</Badge>
                     )}
                 </div>
 
                 {/* Set Alert button */}
                 {isAuthenticated && livePrice && (
-                    <button
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setAlertOpen(true)}
-                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition ml-auto"
+                        className="ml-auto border-amber-500/25 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/40"
                     >
-                        <Bell size={14} />
+                        <Bell size={14} className="mr-1" />
                         Set Alert
-                    </button>
+                    </Button>
                 )}
             </div>
 
@@ -922,66 +903,64 @@ export function CoinDetailPage() {
 
             {/* ── Body ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
                 {/* Left — Chart + Stats */}
-                <div className="lg:col-span-2 space-y-5">
-
+                <div className="lg:col-span-2 space-y-6">
                     {/* Chart card */}
-                    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+                    <Card className="p-5">
                         <CandlestickChart coinId={coinId!} livePrice={livePrice} />
-                    </div>
+                    </Card>
 
                     {/* Stats grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <StatCard
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <DetailStatCard
                             label="Market Cap"
                             value={formatLarge(coin.marketCap)}
                             icon={BarChart3}
                         />
-                        <StatCard
+                        <DetailStatCard
                             label="Volume 24h"
                             value={formatLarge(coin.totalVolume)}
                             icon={Activity}
                         />
-                        <StatCard
+                        <DetailStatCard
                             label="24h High"
                             value={liveHigh ? formatUSD(liveHigh) : '—'}
                             icon={TrendingUp}
-                            sub="từ Binance"
+                            sub="Binance stream"
                         />
-                        <StatCard
+                        <DetailStatCard
                             label="24h Low"
                             value={liveLow ? formatUSD(liveLow) : '—'}
                             icon={TrendingDown}
-                            sub="từ Binance"
+                            sub="Binance stream"
                         />
                     </div>
 
                     {/* Extra info row */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <StatCard
-                            label="Biến động 24h"
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <DetailStatCard
+                            label="24h Change"
                             value={formatPct(liveChange)}
                             icon={ArrowUpDown}
                         />
-                        <StatCard
+                        <DetailStatCard
                             label="Symbol"
                             value={coin.symbol.toUpperCase()}
                             icon={DollarSign}
                         />
-                        <StatCard
-                            label="Nguồn giá"
+                        <DetailStatCard
+                            label="Price Feed"
                             value={liveTick ? 'Binance WS' : 'CoinGecko'}
                             icon={Activity}
-                            sub={liveTick ? 'realtime' : 'snapshot'}
+                            sub={liveTick ? 'streaming active' : 'rest snapshot'}
                         />
                     </div>
                 </div>
 
                 {/* Right — Trading Panel / Login CTA */}
-                <div className="space-y-3">
-                    <h2 className="text-sm font-semibold text-gray-400">
-                        {isAuthenticated ? 'Ghi lại giao dịch' : 'Bắt đầu đầu tư'}
+                <div className="space-y-4">
+                    <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        {isAuthenticated ? 'Execute Transaction' : 'Get Started'}
                     </h2>
 
                     {isAuthenticated
@@ -990,9 +969,9 @@ export function CoinDetailPage() {
                     }
 
                     {isAuthenticated && (
-                        <p className="text-xs text-gray-600 text-center leading-relaxed">
-                            Giao dịch được lưu vào ví bạn chọn.<br />
-                            Giá tự động điền từ Binance realtime.
+                        <p className="text-xs text-gray-600 text-center leading-relaxed font-semibold">
+                            Transactions are recorded instantly into your chosen paper wallet.<br />
+                            Prices are populated from the live stream.
                         </p>
                     )}
                 </div>

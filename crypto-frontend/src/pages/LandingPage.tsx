@@ -1,4 +1,4 @@
-// src/pages/LandingPage.tsx — Exchange-style landing (Binance/OKX feel)
+// src/pages/LandingPage.tsx — Exchange-style landing (Web3/DeFi modern feel)
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -13,6 +13,9 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useBinanceWs } from '@/hooks/useBinanceWs'
 import { useLivePriceStore } from '@/store/livePriceStore'
+import { Button } from '@/components/ui/Button'
+import { Card, CardTitle } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
 
 // ─── Header ────────────────────────────────────────────────────────────────────
 function Header() {
@@ -31,63 +34,65 @@ function Header() {
         <header className={cn(
             'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
             scrolled
-                ? 'bg-gray-950/85 backdrop-blur-xl border-b border-gray-800/80 shadow-lg shadow-black/20'
+                ? 'bg-navy-950/80 backdrop-blur-xl border-b border-white/[0.06] shadow-glass'
                 : 'bg-transparent'
         )}>
-            <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2.5 group">
                     <div className="relative">
-                        <div className="absolute inset-0 bg-indigo-600 rounded-lg blur-md opacity-50 group-hover:opacity-80 transition" />
-                        <div className="relative bg-gradient-to-br from-indigo-500 to-violet-600 rounded-lg p-1.5">
+                        <div className="absolute inset-0 bg-accent-gradient rounded-xl blur-md opacity-45 group-hover:opacity-70 transition" />
+                        <div className="relative bg-gradient-to-br from-accent-cyan to-accent-purple rounded-xl p-2">
                             <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                     </div>
-                    <span className="text-white text-lg font-bold tracking-tight">CryptoDash</span>
+                    <span className="text-white text-base font-bold tracking-tight">CryptoDash</span>
                 </Link>
 
-                <nav className="hidden md:flex items-center gap-7">
-                    <Link to="/market" className="text-sm text-gray-400 hover:text-white transition">Markets</Link>
-                    <Link to="/leaderboard" className="text-sm text-gray-400 hover:text-white transition">Leaderboard</Link>
-                    <a href="#features" className="text-sm text-gray-400 hover:text-white transition">Features</a>
-                    <a href="#trade" className="text-sm text-gray-400 hover:text-white transition">Trade</a>
+                <nav className="hidden md:flex items-center gap-8">
+                    <Link to="/market" className="text-sm font-semibold text-gray-400 hover:text-white transition">Markets</Link>
+                    <Link to="/leaderboard" className="text-sm font-semibold text-gray-400 hover:text-white transition">Leaderboard</Link>
+                    <a href="#features" className="text-sm font-semibold text-gray-400 hover:text-white transition">Features</a>
+                    <a href="#trade" className="text-sm font-semibold text-gray-400 hover:text-white transition">Trade</a>
                 </nav>
 
                 <div className="hidden md:flex items-center gap-3">
                     {isAuthenticated ? (
-                        <button
+                        <Button
+                            variant="primary"
+                            size="md"
                             onClick={() => navigate('/dashboard')}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-semibold rounded-lg transition shadow-lg shadow-indigo-600/20"
                         >
                             Dashboard <ArrowRight size={14} />
-                        </button>
+                        </Button>
                     ) : (
                         <>
-                            <Link to="/login" className="text-sm text-gray-300 hover:text-white transition px-3 py-2">
+                            <Link to="/login" className="text-sm font-semibold text-gray-400 hover:text-white transition px-3 py-2">
                                 Log In
                             </Link>
-                            <Link
-                                to="/register"
-                                className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-gray-950 text-sm font-bold rounded-lg transition shadow-lg shadow-yellow-400/10"
-                            >
-                                Sign Up
+                            <Link to="/register">
+                                <Button variant="primary" size="md">
+                                    Sign Up
+                                </Button>
                             </Link>
                         </>
                     )}
                 </div>
 
                 <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-gray-400 hover:text-white">
-                    {menuOpen ? <X size={22} /> : <Menu size={22} />}
+                    {menuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
             </div>
 
             {menuOpen && (
-                <div className="md:hidden bg-gray-950 border-t border-gray-800 px-6 py-4 space-y-3">
-                    <Link to="/market" className="block text-sm text-gray-400 hover:text-white py-2">Markets</Link>
-                    <Link to="/leaderboard" className="block text-sm text-gray-400 hover:text-white py-2">Leaderboard</Link>
-                    <Link to="/login" className="block text-sm text-gray-400 hover:text-white py-2">Log In</Link>
-                    <Link to="/register" className="block px-4 py-2 bg-yellow-400 text-gray-950 text-sm font-bold rounded-lg text-center">
-                        Sign Up
+                <div className="md:hidden bg-navy-950/95 border-t border-white/[0.06] px-6 py-4 space-y-3">
+                    <Link to="/market" className="block text-sm font-semibold text-gray-400 hover:text-white py-2">Markets</Link>
+                    <Link to="/leaderboard" className="block text-sm font-semibold text-gray-400 hover:text-white py-2">Leaderboard</Link>
+                    <Link to="/login" className="block text-sm font-semibold text-gray-400 hover:text-white py-2">Log In</Link>
+                    <Link to="/register" className="block">
+                        <Button variant="primary" size="md" className="w-full">
+                            Sign Up
+                        </Button>
                     </Link>
                 </div>
             )}
@@ -112,7 +117,7 @@ function MarketTicker() {
     const items = [...coins, ...coins]
 
     return (
-        <div className="relative border-y border-gray-800/80 bg-gray-950/60 backdrop-blur-sm overflow-hidden py-2.5">
+        <div className="relative border-y border-white/[0.04] bg-navy-950/40 backdrop-blur-sm overflow-hidden py-3">
             <div className="flex animate-ticker gap-10 w-max">
                 {items.map((coin, i) => {
                     const live   = ticks[coin.symbol.toLowerCase()]
@@ -121,10 +126,10 @@ function MarketTicker() {
                     const isUp   = pct >= 0
                     return (
                         <div key={`${coin.id}-${i}`} className="flex items-center gap-2 shrink-0">
-                            <img src={coin.image} alt="" className="w-4 h-4 rounded-full" />
-                            <span className="text-xs font-semibold text-gray-300 uppercase">{coin.symbol}</span>
-                            <span className="text-xs text-white font-mono">{formatUSD(price, price >= 1 ? 2 : 6)}</span>
-                            <span className={cn('text-xs font-medium', isUp ? 'text-emerald-400' : 'text-red-400')}>
+                            <img src={coin.image} alt="" loading="lazy" decoding="async" className="w-5 h-5 rounded-full shrink-0" />
+                            <span className="text-xs font-semibold text-gray-400 uppercase">{coin.symbol}</span>
+                            <span className="text-xs text-white font-mono font-medium">{formatUSD(price, price >= 1 ? 2 : 6)}</span>
+                            <span className={cn('text-xs font-semibold font-mono', isUp ? 'text-profit' : 'text-loss')}>
                                 {formatPct(pct)}
                             </span>
                         </div>
@@ -149,111 +154,102 @@ function Hero() {
     const btcChange = ticks['btc']?.change24h ?? btc?.priceChangePercentage24h ?? 0
 
     return (
-        <section className="relative pt-28 pb-16 px-6 overflow-hidden">
-            {/* Animated mesh background */}
+        <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+            {/* Ambient background glows */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse-slow" />
-                <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-violet-600/20 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
-                <div className="absolute top-1/3 right-1/3 w-[400px] h-[400px] bg-yellow-500/10 rounded-full blur-[100px]" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#030712_70%)]" />
-                {/* Grid pattern */}
+                <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-accent-cyan/10 rounded-full blur-[150px] animate-pulse-slow" />
+                <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-accent-purple/10 rounded-full blur-[150px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#0a0e1a_80%)]" />
+                {/* Grid overlay */}
                 <div
-                    className="absolute inset-0 opacity-[0.04]"
+                    className="absolute inset-0 opacity-[0.03]"
                     style={{
-                        backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+                        backgroundImage: 'linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)',
                         backgroundSize: '48px 48px',
                     }}
                 />
             </div>
 
             <div className="relative max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-                    {/* Left content */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                    {/* Left side */}
                     <div className="lg:col-span-7">
-                        <div className="inline-flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 rounded-full px-3 py-1.5 mb-7">
-                            <Sparkles size={12} className="text-yellow-400" />
-                            <span className="text-xs text-yellow-300 font-medium">Simulated trading · No real money</span>
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent-cyan/10 to-accent-purple/10 border border-accent-cyan/20 rounded-full px-3 py-1.5 mb-7">
+                            <Sparkles size={12} className="text-accent-cyan" />
+                            <span className="text-xs text-cyan-300 font-medium">Demo Simulator · Live Binance Data</span>
                         </div>
 
-                        <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.05] mb-6 tracking-tight">
-                            Trade Crypto
-                            <span className="block mt-2 bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-400 bg-clip-text text-transparent">
-                                Like a Pro
+                        <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.05] mb-6 tracking-tight">
+                            Learn Trading
+                            <span className="block mt-2 bg-gradient-to-r from-accent-cyan to-accent-purple bg-clip-text text-transparent">
+                                Without Risk
                             </span>
                         </h1>
 
                         <p className="text-lg text-gray-400 mb-8 leading-relaxed max-w-xl">
-                            Professional crypto portfolio simulator với <span className="text-white font-semibold">spot trading, futures, margin positions</span> và on-chain wallet tracking — tất cả miễn phí, real-time data từ Binance.
+                            Next-gen crypto portfolio simulator. Thực hành trading chuyên nghiệp với <span className="text-white font-semibold">Spot &amp; Futures trading, margin positions</span>, dynamic order books và on-chain tracking.
                         </p>
 
-                        <div className="flex flex-wrap gap-3 mb-10">
-                            <Link
-                                to="/register"
-                                className="flex items-center gap-2 px-7 py-3.5 bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold rounded-xl transition shadow-xl shadow-yellow-400/20 hover:shadow-yellow-400/40"
-                            >
-                                Bắt đầu ngay <ArrowRight size={16} />
+                        <div className="flex flex-wrap gap-4 mb-12">
+                            <Link to="/register">
+                                <Button variant="primary" size="lg" className="px-8 shadow-glow">
+                                    Start Trading <ArrowRight size={16} />
+                                </Button>
                             </Link>
-                            <Link
-                                to="/market"
-                                className="flex items-center gap-2 px-7 py-3.5 bg-white/5 hover:bg-white/10 border border-gray-700 hover:border-gray-600 text-white font-semibold rounded-xl transition backdrop-blur-sm"
-                            >
-                                Xem markets
+                            <Link to="/market">
+                                <Button variant="outline" size="lg" className="px-8">
+                                    Explore Markets
+                                </Button>
                             </Link>
                         </div>
 
-                        {/* Trust stats */}
-                        <div className="grid grid-cols-3 gap-6 pt-6 border-t border-gray-800/60 max-w-md">
+                        {/* Quick stats */}
+                        <div className="grid grid-cols-3 gap-8 pt-8 border-t border-white/[0.06] max-w-md">
                             <div>
-                                <div className="text-2xl font-bold text-white">100+</div>
-                                <div className="text-xs text-gray-500 mt-1">Coins tracked</div>
+                                <div className="text-2xl font-bold text-white font-mono">100+</div>
+                                <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Assets</div>
                             </div>
                             <div>
-                                <div className="text-2xl font-bold text-white">24/7</div>
-                                <div className="text-xs text-gray-500 mt-1">Real-time data</div>
+                                <div className="text-2xl font-bold text-white font-mono">24/7</div>
+                                <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Real-Time</div>
                             </div>
                             <div>
-                                <div className="text-2xl font-bold text-white">$10K</div>
-                                <div className="text-xs text-gray-500 mt-1">Demo balance</div>
+                                <div className="text-2xl font-bold text-white font-mono">$10K</div>
+                                <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Demo Balance</div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right — BTC big ticker card */}
+                    {/* Right side — BTC Card */}
                     <div className="lg:col-span-5">
                         <div className="relative">
-                            {/* Glow */}
-                            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400/30 to-indigo-600/30 rounded-3xl blur-2xl opacity-60" />
-
-                            <div className="relative bg-gray-900/80 backdrop-blur-xl border border-gray-800 rounded-3xl p-7 shadow-2xl">
-                                <div className="flex items-center justify-between mb-5">
+                            <div className="absolute -inset-1.5 bg-gradient-to-r from-accent-cyan/30 to-accent-purple/30 rounded-3xl blur-2xl opacity-60" />
+                            <Card className="p-7 relative" glow>
+                                <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-3">
-                                        {btc && <img src={btc.image} alt="" className="w-12 h-12 rounded-full" />}
+                                        {btc && <img src={btc.image} alt="" className="w-11 h-11 rounded-full shrink-0" />}
                                         <div>
-                                            <div className="text-lg font-bold text-white">BTC/USDT</div>
+                                            <div className="text-base font-bold text-white leading-tight">BTC/USDT</div>
                                             <div className="text-xs text-gray-500">Bitcoin · Spot</div>
                                         </div>
                                     </div>
-                                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md tracking-wider flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                        LIVE
-                                    </span>
+                                    <Badge variant="success" dot>LIVE</Badge>
                                 </div>
 
-                                <div className="mb-2">
-                                    <div className="text-5xl font-bold text-white font-mono tracking-tight">
+                                <div className="mb-4">
+                                    <div className="text-4xl md:text-5xl font-bold text-white font-mono tracking-tight leading-none">
                                         {btcPrice ? formatUSD(btcPrice) : '—'}
                                     </div>
                                     <div className={cn(
-                                        'flex items-center gap-1.5 mt-2 text-sm font-semibold',
-                                        btcChange >= 0 ? 'text-emerald-400' : 'text-red-400',
+                                        'flex items-center gap-1.5 mt-2.5 text-sm font-semibold font-mono',
+                                        btcChange >= 0 ? 'text-profit' : 'text-loss',
                                     )}>
                                         {btcChange >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                                         {formatPct(btcChange)} (24h)
                                     </div>
                                 </div>
 
-                                {/* Top 3 mini */}
-                                <div className="mt-6 pt-6 border-t border-gray-800/60 space-y-2.5">
+                                <div className="mt-6 pt-6 border-t border-white/[0.06] space-y-3.5">
                                     {coins?.slice(1, 4).map(coin => {
                                         const live   = ticks[coin.symbol.toLowerCase()]
                                         const price  = live?.price ?? coin.currentPrice
@@ -262,13 +258,13 @@ function Hero() {
                                             <div key={coin.id} className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2.5">
                                                     <img src={coin.image} alt="" className="w-6 h-6 rounded-full" />
-                                                    <span className="text-sm font-medium text-white uppercase">{coin.symbol}</span>
+                                                    <span className="text-sm font-semibold text-gray-300 uppercase">{coin.symbol}</span>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-sm font-mono text-gray-300">{formatUSD(price, price >= 1 ? 2 : 4)}</span>
+                                                    <span className="text-sm font-semibold text-white font-mono">{formatUSD(price, price >= 1 ? 2 : 4)}</span>
                                                     <span className={cn(
                                                         'text-xs font-semibold font-mono w-16 text-right',
-                                                        change >= 0 ? 'text-emerald-400' : 'text-red-400',
+                                                        change >= 0 ? 'text-profit' : 'text-loss',
                                                     )}>
                                                         {formatPct(change)}
                                                     </span>
@@ -278,13 +274,12 @@ function Hero() {
                                     })}
                                 </div>
 
-                                <Link
-                                    to="/market"
-                                    className="mt-5 flex items-center justify-center gap-1.5 w-full py-2.5 bg-white/5 hover:bg-white/10 border border-gray-800 rounded-xl text-sm text-gray-300 font-medium transition"
-                                >
-                                    View all markets <ChevronRight size={14} />
+                                <Link to="/market" className="block mt-6">
+                                    <Button variant="outline" size="sm" className="w-full">
+                                        View all markets <ChevronRight size={14} />
+                                    </Button>
                                 </Link>
-                            </div>
+                            </Card>
                         </div>
                     </div>
                 </div>
@@ -307,46 +302,46 @@ function MarketOverview() {
     return (
         <section className="relative py-20 px-6">
             <div className="max-w-7xl mx-auto">
-                <div className="flex items-end justify-between mb-10 flex-wrap gap-3">
+                <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
                     <div>
-                        <div className="text-xs font-bold tracking-widest text-yellow-400 uppercase mb-2">Live Markets</div>
-                        <h2 className="text-3xl md:text-4xl font-bold text-white">Top cryptocurrencies</h2>
+                        <div className="text-xs font-bold tracking-widest text-accent-cyan uppercase mb-2">Live Markets</div>
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">Top Trading Assets</h2>
                     </div>
-                    <Link to="/market" className="flex items-center gap-1.5 text-sm text-yellow-400 hover:text-yellow-300 transition font-semibold">
+                    <Link to="/market" className="text-sm text-accent-cyan hover:text-accent-cyan/80 transition font-semibold flex items-center gap-1">
                         View all markets <ArrowRight size={14} />
                     </Link>
                 </div>
 
-                <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800 rounded-2xl overflow-hidden">
+                <div className="glass-card overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-gray-800 bg-gray-950/40">
-                                    <th className="pl-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide w-12">#</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Name</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Price</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">24h Change</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide hidden md:table-cell">Volume</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide hidden lg:table-cell">Market Cap</th>
-                                    <th className="pr-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide" />
+                                <tr className="border-b border-white/[0.06] bg-navy-950/40">
+                                    <th className="pl-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">#</th>
+                                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+                                    <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Price</th>
+                                    <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">24h Change</th>
+                                    <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Volume</th>
+                                    <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Market Cap</th>
+                                    <th className="pr-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" />
                                 </tr>
                             </thead>
                             <tbody>
                                 {isLoading
                                     ? Array.from({ length: 8 }).map((_, i) => (
-                                        <tr key={i} className="border-b border-gray-800/50">
-                                            <td className="pl-6 py-4"><div className="w-3 h-3 bg-gray-800 animate-pulse rounded" /></td>
-                                            <td className="px-4 py-4">
+                                        <tr key={i} className="border-b border-white/[0.04]">
+                                            <td className="pl-6 py-5"><div className="w-3 h-3 bg-gray-800 animate-pulse rounded" /></td>
+                                            <td className="px-4 py-5">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-7 h-7 bg-gray-800 animate-pulse rounded-full" />
                                                     <div className="w-24 h-3 bg-gray-800 animate-pulse rounded" />
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                                            <td className="px-4 py-4"><div className="w-14 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                                            <td className="px-4 py-4 hidden md:table-cell"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                                            <td className="px-4 py-4 hidden lg:table-cell"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                                            <td className="pr-6 py-4" />
+                                            <td className="px-4 py-5"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
+                                            <td className="px-4 py-5"><div className="w-14 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
+                                            <td className="px-4 py-5 hidden md:table-cell"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
+                                            <td className="px-4 py-5 hidden lg:table-cell"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
+                                            <td className="pr-6 py-5" />
                                         </tr>
                                     ))
                                     : coins?.slice(0, 10).map((coin, i) => {
@@ -358,7 +353,7 @@ function MarketOverview() {
                                             <tr
                                                 key={coin.id}
                                                 onClick={() => navigate(`/market/${coin.id}`)}
-                                                className="border-b border-gray-800/40 hover:bg-gray-800/30 transition cursor-pointer group"
+                                                className="border-b border-white/[0.04] hover:bg-white/[0.02] transition cursor-pointer group"
                                             >
                                                 <td className="pl-6 py-4 text-xs text-gray-500 font-mono">{i + 1}</td>
                                                 <td className="px-4 py-4">
@@ -376,7 +371,7 @@ function MarketOverview() {
                                                 <td className="px-4 py-4 text-right">
                                                     <span className={cn(
                                                         'text-sm font-semibold font-mono',
-                                                        pos ? 'text-emerald-400' : 'text-red-400',
+                                                        pos ? 'text-profit' : 'text-loss',
                                                     )}>
                                                         {formatPct(change)}
                                                     </span>
@@ -391,9 +386,10 @@ function MarketOverview() {
                                                     <Link
                                                         to="/register"
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="text-xs font-bold text-gray-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-1.5 rounded-lg transition"
                                                     >
-                                                        Trade
+                                                        <Button variant="outline" size="sm">
+                                                            Trade
+                                                        </Button>
                                                     </Link>
                                                 </td>
                                             </tr>
@@ -411,53 +407,53 @@ function MarketOverview() {
 // ─── Trading Showcase ─────────────────────────────────────────────────────────
 function TradingShowcase() {
     return (
-        <section id="trade" className="relative py-24 px-6 border-t border-gray-800/60 overflow-hidden">
+        <section id="trade" className="relative py-24 px-6 border-t border-white/[0.06] overflow-hidden">
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px]" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent-purple/5 rounded-full blur-[120px]" />
             </div>
 
             <div className="relative max-w-7xl mx-auto">
-                <div className="text-center mb-14">
-                    <div className="text-xs font-bold tracking-widest text-yellow-400 uppercase mb-2">Pro Tools</div>
-                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Built for serious traders</h2>
-                    <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                <div className="text-center mb-16">
+                    <div className="text-xs font-bold tracking-widest text-accent-cyan uppercase mb-2">Pro Tools</div>
+                    <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">Built for Serious Traders</h2>
+                    <p className="text-gray-400 max-w-2xl mx-auto text-base">
                         Advanced charts, real-time order books, conditional orders và margin positions — mọi thứ bạn cần để thực hành trading.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <FeatureCard
-                        icon={<BarChart3 className="text-yellow-400" size={22} />}
+                        icon={<BarChart3 className="text-accent-cyan" size={20} />}
                         title="Advanced Charts"
                         desc="KLineChart với EMA, RSI, MACD, Bollinger Bands. 9 drawing tools cho technical analysis."
-                        accent="yellow"
+                        accent="cyan"
                     />
                     <FeatureCard
-                        icon={<Zap className="text-indigo-400" size={22} />}
+                        icon={<Zap className="text-accent-purple" size={20} />}
                         title="Real-time Order Book"
                         desc="Depth-of-market 20 levels, recent trades stream, depth chart visualization."
-                        accent="indigo"
+                        accent="purple"
                     />
                     <FeatureCard
-                        icon={<Activity className="text-emerald-400" size={22} />}
+                        icon={<Activity className="text-emerald-400" size={20} />}
                         title="Margin Positions"
                         desc="Long/Short với leverage 1-100x. Stop-loss, take-profit, auto-liquidation."
                         accent="emerald"
                     />
                     <FeatureCard
-                        icon={<Wallet className="text-violet-400" size={22} />}
+                        icon={<Wallet className="text-blue-400" size={20} />}
                         title="Multi-Wallet Portfolio"
                         desc="Quản lý nhiều ví khác nhau, theo dõi holdings và P&L real-time."
-                        accent="violet"
+                        accent="blue"
                     />
                     <FeatureCard
-                        icon={<Globe className="text-cyan-400" size={22} />}
+                        icon={<Globe className="text-cyan-400" size={20} />}
                         title="On-Chain Tracking"
                         desc="Track external EVM wallets qua MetaMask. Hỗ trợ Ethereum, BSC, Polygon, Arbitrum."
                         accent="cyan"
                     />
                     <FeatureCard
-                        icon={<Shield className="text-pink-400" size={22} />}
+                        icon={<Shield className="text-pink-400" size={20} />}
                         title="Secure JWT Auth"
                         desc="Access + refresh token rotation, auto re-auth, SHA-256 hashed refresh tokens."
                         accent="pink"
@@ -470,27 +466,24 @@ function TradingShowcase() {
 
 function FeatureCard({ icon, title, desc, accent }: {
     icon: React.ReactNode; title: string; desc: string
-    accent: 'yellow' | 'indigo' | 'emerald' | 'violet' | 'cyan' | 'pink'
+    accent: 'cyan' | 'purple' | 'emerald' | 'blue' | 'pink'
 }) {
-    const glowColors: Record<string, string> = {
-        yellow:  'group-hover:shadow-yellow-500/10',
-        indigo:  'group-hover:shadow-indigo-500/10',
-        emerald: 'group-hover:shadow-emerald-500/10',
-        violet:  'group-hover:shadow-violet-500/10',
-        cyan:    'group-hover:shadow-cyan-500/10',
-        pink:    'group-hover:shadow-pink-500/10',
+    const borderGlows = {
+        cyan:    'hover:border-accent-cyan/30 hover:shadow-glow',
+        purple:  'hover:border-accent-purple/30 hover:shadow-glow-purple',
+        emerald: 'hover:border-emerald-500/30 hover:shadow-glow-profit',
+        blue:    'hover:border-blue-500/30 hover:shadow-glow',
+        pink:    'hover:border-pink-500/30 hover:shadow-glow-loss',
     }
+
     return (
-        <div className={cn(
-            'group bg-gray-900/60 border border-gray-800 hover:border-gray-700 rounded-2xl p-6 transition-all hover:-translate-y-1 hover:shadow-2xl',
-            glowColors[accent],
-        )}>
-            <div className="w-11 h-11 bg-gray-800/80 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+        <Card className={cn('p-6 transition-all duration-300 hover:-translate-y-1', borderGlows[accent])}>
+            <div className="w-11 h-11 bg-white/[0.04] border border-white/[0.06] rounded-xl flex items-center justify-center mb-4 transition-transform">
                 {icon}
             </div>
-            <h3 className="font-bold text-white text-lg mb-2">{title}</h3>
+            <CardTitle className="text-lg font-bold mb-2">{title}</CardTitle>
             <p className="text-sm text-gray-400 leading-relaxed">{desc}</p>
-        </div>
+        </Card>
     )
 }
 
@@ -503,22 +496,22 @@ function HowItWorks() {
         { n: '04', title: 'Compete', desc: 'Vào leaderboard, so kè với top traders, export rank thành PNG.' },
     ]
     return (
-        <section id="features" className="relative py-20 px-6 border-t border-gray-800/60">
+        <section id="features" className="relative py-20 px-6 border-t border-white/[0.06]">
             <div className="max-w-7xl mx-auto">
-                <div className="text-center mb-14">
-                    <div className="text-xs font-bold tracking-widest text-yellow-400 uppercase mb-2">Get Started</div>
-                    <h2 className="text-3xl md:text-4xl font-bold text-white">Bắt đầu trong 4 bước</h2>
+                <div className="text-center mb-16">
+                    <div className="text-xs font-bold tracking-widest text-accent-cyan uppercase mb-2">Get Started</div>
+                    <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">Simple 4-Step Process</h2>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {steps.map((s, i) => (
-                        <div key={i} className="relative bg-gray-900/40 border border-gray-800 rounded-2xl p-6 hover:border-yellow-400/30 transition">
-                            <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-700 to-gray-800 mb-3">
+                        <Card key={i} className="relative p-6 hover:border-accent-cyan/30 transition-all duration-300">
+                            <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-700 to-gray-800 mb-3 font-mono">
                                 {s.n}
                             </div>
-                            <h3 className="font-bold text-white text-base mb-2">{s.title}</h3>
+                            <CardTitle className="text-base font-bold mb-2">{s.title}</CardTitle>
                             <p className="text-sm text-gray-400 leading-relaxed">{s.desc}</p>
-                        </div>
+                        </Card>
                     ))}
                 </div>
             </div>
@@ -535,43 +528,41 @@ function CTASection() {
         'Margin trading & on-chain wallet tracking',
     ]
     return (
-        <section className="py-24 px-6 border-t border-gray-800/60">
+        <section className="py-20 px-6 border-t border-white/[0.06]">
             <div className="max-w-5xl mx-auto">
-                <div className="relative bg-gradient-to-br from-indigo-600/15 via-violet-600/10 to-yellow-400/10 border border-gray-800 rounded-3xl px-8 md:px-16 py-16 overflow-hidden">
+                <div className="relative bg-gradient-to-br from-accent-cyan/10 via-accent-purple/10 to-transparent border border-white/[0.06] rounded-3xl px-8 md:px-16 py-16 overflow-hidden">
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-64 bg-yellow-400/10 rounded-full blur-3xl" />
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-64 bg-accent-cyan/5 rounded-full blur-3xl" />
                     </div>
                     <div className="relative grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
                         <div>
-                            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                                Sẵn sàng trade
-                                <span className="block bg-gradient-to-r from-yellow-300 to-amber-400 bg-clip-text text-transparent">
-                                    như một pro?
+                            <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight tracking-tight">
+                                Start Trading
+                                <span className="block bg-gradient-to-r from-accent-cyan to-accent-purple bg-clip-text text-transparent">
+                                    Like a Pro Today
                                 </span>
                             </h2>
                             <p className="text-gray-400 mb-8 leading-relaxed">
                                 Tham gia cộng đồng traders đang dùng CryptoDash để học và thử nghiệm strategies.
                             </p>
-                            <div className="flex flex-wrap gap-3">
-                                <Link
-                                    to="/register"
-                                    className="flex items-center gap-2 px-7 py-3.5 bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold rounded-xl transition shadow-xl shadow-yellow-400/20"
-                                >
-                                    Đăng ký miễn phí <ArrowRight size={16} />
+                            <div className="flex flex-wrap gap-4">
+                                <Link to="/register">
+                                    <Button variant="primary" size="lg" className="px-6 shadow-glow">
+                                        Sign Up Free <ArrowRight size={16} />
+                                    </Button>
                                 </Link>
-                                <Link
-                                    to="/leaderboard"
-                                    className="flex items-center gap-2 px-7 py-3.5 bg-white/5 hover:bg-white/10 border border-gray-700 text-white font-semibold rounded-xl transition"
-                                >
-                                    Xem leaderboard
+                                <Link to="/leaderboard">
+                                    <Button variant="outline" size="lg" className="px-6">
+                                        Leaderboard
+                                    </Button>
                                 </Link>
                             </div>
                         </div>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             {benefits.map((b, i) => (
                                 <div key={i} className="flex items-start gap-3">
-                                    <CheckCircle2 size={20} className="text-yellow-400 shrink-0 mt-0.5" />
-                                    <span className="text-gray-200 text-sm">{b}</span>
+                                    <CheckCircle2 size={18} className="text-accent-cyan shrink-0 mt-0.5" />
+                                    <span className="text-gray-200 text-sm font-semibold">{b}</span>
                                 </div>
                             ))}
                         </div>
@@ -585,12 +576,12 @@ function CTASection() {
 // ─── Footer ───────────────────────────────────────────────────────────────────
 function Footer() {
     return (
-        <footer className="border-t border-gray-800 px-6 py-12 bg-gray-950">
+        <footer className="border-t border-white/[0.06] px-6 py-12 bg-navy-950/60">
             <div className="max-w-7xl mx-auto">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
                     <div className="col-span-2">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="bg-gradient-to-br from-indigo-500 to-violet-600 rounded-lg p-1.5">
+                        <div className="flex items-center gap-2.5 mb-4">
+                            <div className="bg-gradient-to-br from-accent-cyan to-accent-purple rounded-lg p-1.5">
                                 <TrendingUp className="h-4 w-4 text-white" />
                             </div>
                             <span className="text-white font-bold">CryptoDash</span>
@@ -614,11 +605,11 @@ function Footer() {
                     ]} />
                 </div>
 
-                <div className="pt-6 border-t border-gray-800/60 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-gray-600">
+                <div className="pt-6 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-4">
+                    <p className="text-xs text-gray-650">
                         © 2026 CryptoDash · Built with React + .NET 9 · Data from CoinGecko & Binance
                     </p>
-                    <p className="text-xs text-gray-700">
+                    <p className="text-xs text-gray-650">
                         Chỉ dành cho mục đích học tập — không phải investment advice
                     </p>
                 </div>
@@ -630,8 +621,8 @@ function Footer() {
 function FooterCol({ title, links }: { title: string; links: { to: string; label: string }[] }) {
     return (
         <div>
-            <div className="text-sm font-semibold text-white mb-3">{title}</div>
-            <ul className="space-y-2">
+            <div className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">{title}</div>
+            <ul className="space-y-2.5">
                 {links.map(l => (
                     <li key={l.to + l.label}>
                         <Link to={l.to} className="text-sm text-gray-500 hover:text-white transition">{l.label}</Link>
@@ -645,7 +636,7 @@ function FooterCol({ title, links }: { title: string; links: { to: string; label
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export function LandingPage() {
     return (
-        <div className="min-h-screen bg-gray-950 text-white selection:bg-yellow-400/30 selection:text-yellow-100">
+        <div className="min-h-screen bg-navy-900 text-white selection:bg-accent-cyan/30 selection:text-cyan-100">
             <Header />
             <div className="pt-16">
                 <MarketTicker />

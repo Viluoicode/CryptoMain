@@ -32,62 +32,64 @@ const ToastContext = createContext<ToastContextValue | null>(null)
 const CONFIG: Record<ToastType, {
     icon: typeof CheckCircle
     iconCls: string
-    barCls: string
+    accentBorder: string
     bg: string
 }> = {
     success: {
         icon: CheckCircle,
-        iconCls: 'text-emerald-500',
-        barCls: 'bg-emerald-500',
-        bg: 'bg-white dark:bg-gray-800 border-l-4 border-emerald-500',
+        iconCls: 'text-emerald-400',
+        accentBorder: 'border-l-emerald-500',
+        bg: 'bg-navy-800/90 backdrop-blur-xl',
     },
     error: {
         icon: XCircle,
-        iconCls: 'text-red-500',
-        barCls: 'bg-red-500',
-        bg: 'bg-white dark:bg-gray-800 border-l-4 border-red-500',
+        iconCls: 'text-red-400',
+        accentBorder: 'border-l-red-500',
+        bg: 'bg-navy-800/90 backdrop-blur-xl',
     },
     warning: {
         icon: AlertCircle,
-        iconCls: 'text-amber-500',
-        barCls: 'bg-amber-500',
-        bg: 'bg-white dark:bg-gray-800 border-l-4 border-amber-500',
+        iconCls: 'text-amber-400',
+        accentBorder: 'border-l-amber-500',
+        bg: 'bg-navy-800/90 backdrop-blur-xl',
     },
     info: {
         icon: Info,
-        iconCls: 'text-blue-500',
-        barCls: 'bg-blue-500',
-        bg: 'bg-white dark:bg-gray-800 border-l-4 border-blue-500',
+        iconCls: 'text-accent-cyan',
+        accentBorder: 'border-l-accent-cyan',
+        bg: 'bg-navy-800/90 backdrop-blur-xl',
     },
 }
 
 // ── Single Toast item ──────────────────────────────────────────────────────
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) {
-    const { icon: Icon, iconCls, bg } = CONFIG[toast.type]
+    const { icon: Icon, iconCls, accentBorder, bg } = CONFIG[toast.type]
 
     return (
         <div
             className={cn(
-                'flex items-start gap-3 w-80 rounded-lg shadow-lg px-4 py-3',
+                'flex items-start gap-3 w-80 rounded-xl shadow-glass px-4 py-3',
+                'border-l-4 border border-white/[0.06]',
                 'animate-slide-in',
                 bg,
+                accentBorder,
             )}
             role="alert"
         >
             <Icon className={cn('mt-0.5 shrink-0', iconCls)} size={18} />
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                <p className="text-sm font-semibold text-white leading-tight">
                     {toast.title}
                 </p>
                 {toast.message && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                    <p className="text-xs text-gray-400 mt-0.5 leading-snug">
                         {toast.message}
                     </p>
                 )}
             </div>
             <button
                 onClick={() => onRemove(toast.id)}
-                className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                className="shrink-0 text-gray-500 hover:text-gray-300 transition-colors"
             >
                 <X size={14} />
             </button>

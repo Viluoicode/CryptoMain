@@ -101,28 +101,28 @@ function SymbolHeader({ pair, tick, flash, onSelectPair }: SymbolHeaderProps) {
     const [open, setOpen] = useState(false)
 
     return (
-        <div className="flex items-center gap-6 px-4 py-3 bg-gray-900 border-b border-gray-800 flex-wrap">
+        <div className="flex items-center gap-6 px-4 py-3 bg-navy-950 border-b border-white/[0.06] flex-wrap relative z-20">
             {/* Pair selector */}
             <div className="relative">
                 <button
                     onClick={() => setOpen(o => !o)}
-                    className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 rounded-xl px-3 py-2 transition"
+                    className="flex items-center gap-2 bg-navy-900 border border-white/[0.08] hover:border-white/[0.15] hover:bg-navy-850 rounded-xl px-3 py-2 transition"
                 >
-                    <div className="w-6 h-6 bg-indigo-500/20 rounded-full flex items-center justify-center">
-                        <TrendingUp size={12} className="text-indigo-400" />
+                    <div className="w-6 h-6 bg-gradient-to-br from-accent-cyan/20 to-accent-purple/20 rounded-full flex items-center justify-center">
+                        <TrendingUp size={12} className="text-accent-cyan" />
                     </div>
-                    <span className="font-bold text-white text-sm">{pair.label}</span>
+                    <span className="font-bold text-white text-sm font-sans">{pair.label}</span>
                     <ChevronDown size={14} className="text-gray-400" />
                 </button>
                 {open && (
-                    <div className="absolute top-full mt-1 left-0 z-50 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden shadow-2xl min-w-[160px]">
+                    <div className="absolute top-full mt-1.5 left-0 z-50 bg-navy-900/95 border border-white/[0.08] rounded-xl overflow-hidden shadow-glass backdrop-blur-xl min-w-[160px]">
                         {PAIRS.map(p => (
                             <button
                                 key={p.symbol}
                                 onClick={() => { onSelectPair(p); setOpen(false) }}
                                 className={cn(
-                                    'flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-gray-700 transition text-left',
-                                    p.symbol === pair.symbol ? 'text-indigo-400 bg-indigo-500/10' : 'text-gray-300',
+                                    'flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-white/[0.05] transition text-left',
+                                    p.symbol === pair.symbol ? 'text-accent-cyan bg-accent-cyan/10 font-bold' : 'text-gray-300',
                                 )}
                             >
                                 <span className="font-semibold">{p.base}</span>
@@ -135,9 +135,9 @@ function SymbolHeader({ pair, tick, flash, onSelectPair }: SymbolHeaderProps) {
 
             {/* Live price */}
             <div className={cn(
-                'text-2xl font-bold font-mono transition-colors duration-300',
-                flash === 'up'   ? 'text-emerald-400' :
-                flash === 'down' ? 'text-red-400' :
+                'text-2xl font-bold font-mono transition-all duration-300 px-2 py-0.5 rounded-lg',
+                flash === 'up'   ? 'text-emerald-400 bg-emerald-500/10 shadow-glow-profit' :
+                flash === 'down' ? 'text-red-400 bg-red-500/10 shadow-glow-loss' :
                 tick && tick.change >= 0 ? 'text-emerald-400' : 'text-red-400',
             )}>
                 {tick ? fmtPrice(tick.price, pair.symbol) : '—'}
@@ -145,7 +145,7 @@ function SymbolHeader({ pair, tick, flash, onSelectPair }: SymbolHeaderProps) {
 
             {/* 24h stats */}
             {tick && (
-                <>
+                <div className="flex items-center gap-5 flex-wrap">
                     <StatPill
                         label="24h Change"
                         value={`${tick.change >= 0 ? '+' : ''}${tick.change.toFixed(2)}%`}
@@ -155,12 +155,12 @@ function SymbolHeader({ pair, tick, flash, onSelectPair }: SymbolHeaderProps) {
                     <StatPill label="24h Low"   value={fmtPrice(tick.low, pair.symbol)} />
                     <StatPill label="Volume"    value={`${fmt(tick.volume)} ${pair.base}`} />
                     <StatPill label="Quote Vol" value={`$${fmt(tick.quoteVolume)}`} />
-                </>
+                </div>
             )}
 
-            <div className="ml-auto flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs text-emerald-400 font-medium">LIVE</span>
+            <div className="ml-auto flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">LIVE</span>
             </div>
         </div>
     )
@@ -169,11 +169,11 @@ function SymbolHeader({ pair, tick, flash, onSelectPair }: SymbolHeaderProps) {
 function StatPill({ label, value, color }: { label: string; value: string; color?: 'emerald' | 'red' }) {
     return (
         <div className="flex flex-col">
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider">{label}</span>
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{label}</span>
             <span className={cn(
-                'text-sm font-mono font-semibold',
+                'text-xs font-mono font-bold mt-0.5',
                 color === 'emerald' ? 'text-emerald-400' :
-                color === 'red'     ? 'text-red-400' : 'text-gray-200',
+                color === 'red'     ? 'text-red-400' : 'text-gray-300',
             )}>
                 {value}
             </span>
@@ -184,8 +184,8 @@ function StatPill({ label, value, color }: { label: string; value: string; color
 // ─── KLineChart dark theme ─────────────────────────────────────────────────────
 const KLINE_DARK_STYLES = {
     grid: {
-        horizontal: { color: '#1f2937' },
-        vertical:   { color: '#1f2937' },
+        horizontal: { color: 'rgba(255, 255, 255, 0.02)' },
+        vertical:   { color: 'rgba(255, 255, 255, 0.02)' },
     },
     candle: {
         bar: {
@@ -205,65 +205,65 @@ const KLINE_DARK_STYLES = {
                 downColor:   '#ef4444',
                 noChangeColor: '#6b7280',
                 line:  { show: true,  style: 'dashed' },
-                text:  { show: true,  color: '#fff', backgroundColor: '#374151', borderColor: '#4b5563' },
+                text:  { show: true,  color: '#fff', backgroundColor: '#0f1629', borderColor: '#1a2340' },
             },
         },
         tooltip: {
-            rect: { color: '#111827', borderColor: '#374151', borderRadius: 4 },
+            rect: { color: '#0a0e1a', borderColor: 'rgba(255,255,255,0.08)', borderRadius: 8 },
             text: { color: '#9ca3af' },
         },
     },
     indicator: {
         lines: [
             { color: '#facc15' }, // yellow  — 1st calc param
-            { color: '#60a5fa' }, // blue    — 2nd
-            { color: '#f472b6' }, // pink    — 3rd
-            { color: '#a78bfa' }, // violet  — 4th
-            { color: '#34d399' }, // green   — 5th
+            { color: '#0059FB' }, // Toobit Blue — 2nd
+            { color: '#8b5cf6' }, // purple  — 3rd
+            { color: '#f472b6' }, // pink    — 4th
+            { color: '#03c076' }, // Toobit Green — 5th
         ],
         bars: [
             {
                 style: 'fill',
-                upColor:      'rgba(16,185,129,.5)',
-                downColor:    'rgba(239,68,68,.5)',
-                noChangeColor:'rgba(107,114,128,.5)',
+                upColor:      'rgba(3,192,118,.4)',
+                downColor:    'rgba(246,70,93,.4)',
+                noChangeColor:'rgba(107,114,128,.4)',
             },
         ],
         tooltip: { text: { color: '#9ca3af' } },
     },
     xAxis: {
-        axisLine: { color: '#374151' },
-        tickLine: { color: '#374151' },
-        tickText: { color: '#6b7280', size: 11 },
+        axisLine: { color: 'rgba(255,255,255,0.05)' },
+        tickLine: { color: 'rgba(255,255,255,0.05)' },
+        tickText: { color: '#6b7280', size: 10 },
     },
     yAxis: {
-        axisLine: { color: '#374151' },
-        tickLine: { color: '#374151' },
-        tickText: { color: '#6b7280', size: 11 },
+        axisLine: { color: 'rgba(255,255,255,0.05)' },
+        tickLine: { color: 'rgba(255,255,255,0.05)' },
+        tickText: { color: '#6b7280', size: 10 },
     },
     crosshair: {
         horizontal: {
-            line: { style: 'dashed', color: '#6b7280' },
-            text: { color: '#fff', backgroundColor: '#374151', borderColor: '#4b5563', borderRadius: 3 },
+            line: { style: 'dashed', color: '#4b5563' },
+            text: { color: '#fff', backgroundColor: '#0d1221', borderColor: '#1a2340', borderRadius: 4 },
         },
         vertical: {
-            line: { style: 'dashed', color: '#6b7280' },
-            text: { color: '#fff', backgroundColor: '#374151', borderColor: '#4b5563', borderRadius: 3 },
+            line: { style: 'dashed', color: '#4b5563' },
+            text: { color: '#fff', backgroundColor: '#0d1221', borderColor: '#1a2340', borderRadius: 4 },
         },
     },
     overlay: {
         point: {
-            color:             '#6366f1',
-            borderColor:       'rgba(99,102,241,.4)',
-            activeColor:       '#818cf8',
-            activeBorderColor: 'rgba(129,140,248,.4)',
+            color:             '#0059FB',
+            borderColor:       'rgba(0,89,251,.4)',
+            activeColor:       '#8b5cf6',
+            activeBorderColor: 'rgba(139,92,246,.4)',
             activeBorderSize:  3,
         },
-        line:    { style: 'solid', color: '#6366f1', size: 1.5 },
-        rect:    { style: 'fill', color: 'rgba(99,102,241,.12)', borderColor: '#6366f1', borderSize: 1 },
-        polygon: { style: 'fill', color: 'rgba(99,102,241,.12)', borderColor: '#6366f1', borderSize: 1 },
-        circle:  { style: 'fill', color: 'rgba(99,102,241,.12)', borderColor: '#6366f1', borderSize: 1 },
-        text:    { style: 'fill', color: '#818cf8', size: 13, borderColor: '#6366f1', backgroundColor: 'transparent' },
+        line:    { style: 'solid', color: '#0059FB', size: 1.5 },
+        rect:    { style: 'fill', color: 'rgba(0,89,251,.08)', borderColor: '#0059FB', borderSize: 1 },
+        polygon: { style: 'fill', color: 'rgba(0,89,251,.08)', borderColor: '#0059FB', borderSize: 1 },
+        circle:  { style: 'fill', color: 'rgba(0,89,251,.08)', borderColor: '#0059FB', borderSize: 1 },
+        text:    { style: 'fill', color: '#0059FB', size: 12, borderColor: '#0059FB', backgroundColor: 'transparent' },
     },
 }
 
@@ -300,7 +300,7 @@ function DrawingToolbar({
     onClearAll: () => void
 }) {
     return (
-        <div className="flex flex-col items-center gap-0.5 py-2 px-1 bg-gray-900 border-r border-gray-800 w-9 shrink-0">
+        <div className="flex flex-col items-center gap-1 py-3 px-1 bg-navy-950 border-r border-white/[0.06] w-10 shrink-0">
             {DRAWING_TOOLS.map((tool, i) => {
                 const Icon = tool.icon
                 const prevGroup = i > 0 ? DRAWING_TOOLS[i - 1].group : null
@@ -308,21 +308,20 @@ function DrawingToolbar({
 
                 return (
                     <div key={tool.id} className="flex flex-col items-center w-full">
-                        {showSep && <div className="w-5 h-px bg-gray-700/60 my-1" />}
+                        {showSep && <div className="w-5 h-px bg-white/[0.08] my-1" />}
                         <button
                             title={tool.label}
                             onClick={() => onSelect(tool.id, tool.overlay)}
                             className={cn(
-                                'w-7 h-7 flex items-center justify-center rounded-lg transition-all',
+                                'w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200',
                                 activeTool === tool.id
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800',
+                                    ? 'bg-gradient-to-r from-accent-cyan to-accent-purple text-white shadow-glow'
+                                    : 'text-gray-500 hover:text-white hover:bg-white/[0.05]',
                             )}
                         >
-                            {/* Horizontal lines share the Minus icon — rotate for H-line vs H-ray visual diff */}
                             {tool.id === 'horizontalStraightLine'
-                                ? <Icon size={13} className="opacity-80" />
-                                : <Icon size={13} />
+                                ? <Icon size={14} className="opacity-80 rotate-90" />
+                                : <Icon size={14} />
                             }
                         </button>
                     </div>
@@ -330,13 +329,13 @@ function DrawingToolbar({
             })}
 
             {/* Clear all drawings */}
-            <div className="w-5 h-px bg-gray-700/60 my-1" />
+            <div className="w-5 h-px bg-white/[0.08] my-1" />
             <button
                 title="Clear all drawings"
                 onClick={onClearAll}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
             >
-                <Trash2 size={13} />
+                <Trash2 size={14} />
             </button>
         </div>
     )
@@ -350,8 +349,8 @@ function IndBtn({ label, active, color, onClick }: {
         <button
             onClick={onClick}
             className={cn(
-                'px-2 py-0.5 text-[11px] font-mono rounded border transition',
-                active ? color : 'text-gray-600 border-gray-800 hover:border-gray-700 hover:text-gray-500',
+                'px-2.5 py-0.5 text-[10px] font-mono rounded border transition-all duration-200 font-bold',
+                active ? color : 'text-gray-500 border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:text-gray-300',
             )}
         >
             {label}
@@ -393,7 +392,7 @@ function FuturesChart({ pair, interval, onIntervalChange, liveKline }: FuturesCh
         if (!chart) return
         chartRef.current = chart
 
-        // EMA 7 / 25 / 99 on main candle pane (yellow / blue / pink from styles)
+        // EMA 7 / 25 / 99 on main candle pane
         chart.createIndicator(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             { name: 'EMA', calcParams: [7, 25, 99] } as any,
@@ -402,7 +401,7 @@ function FuturesChart({ pair, interval, onIntervalChange, liveKline }: FuturesCh
         )
 
         // Volume pane (always shown)
-        chart.createIndicator('VOL', false, { height: 56, gap: { top: 0.2, bottom: 0.1 } })
+        chart.createIndicator('VOL', false, { height: 60, gap: { top: 0.2, bottom: 0.1 } })
 
         // Resize observer
         const ro = new ResizeObserver(() => chart.resize())
@@ -462,7 +461,7 @@ function FuturesChart({ pair, interval, onIntervalChange, liveKline }: FuturesCh
         })
     }, [liveKline])
 
-    // ── Generic toggleable indicator helper (new pane, not candle pane) ────────
+    // ── Generic toggleable indicator helper ────────
     function toggleIndicator(
         name: string,
         show: boolean,
@@ -484,7 +483,7 @@ function FuturesChart({ pair, interval, onIntervalChange, liveKline }: FuturesCh
     useEffect(() => { toggleIndicator('MACD', showMACD, 'macd') }, [showMACD]) // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { toggleIndicator('KDJ',  showKDJ,  'kdj') },  [showKDJ])  // eslint-disable-line react-hooks/exhaustive-deps
 
-    // BOLL lives on the main candle pane — no separate pane needed
+    // BOLL lives on the main candle pane
     useEffect(() => {
         const chart = chartRef.current
         if (!chart) return
@@ -510,22 +509,21 @@ function FuturesChart({ pair, interval, onIntervalChange, liveKline }: FuturesCh
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div className="flex flex-col h-full bg-gray-950">
-
+        <div className="flex flex-col h-full bg-navy-950">
             {/* ── Top toolbar ── */}
-            <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-800 bg-gray-900 flex-wrap shrink-0">
+            <div className="flex items-center gap-3 px-3 py-1.5 border-b border-white/[0.06] bg-navy-900 flex-wrap shrink-0">
                 {/* Interval */}
-                <div className="flex items-center gap-0.5">
-                    <BarChart3 size={11} className="text-gray-600 mr-1" />
+                <div className="flex items-center gap-1">
+                    <BarChart3 size={12} className="text-gray-500 mr-1" />
                     {INTERVALS.map(iv => (
                         <button
                             key={iv.key}
                             onClick={() => onIntervalChange(iv.key)}
                             className={cn(
-                                'px-2.5 py-1 text-xs rounded-lg font-medium transition',
+                                'px-2.5 py-1 text-xs rounded-lg font-bold transition-all duration-200',
                                 iv.key === interval
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800',
+                                    ? 'bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/35'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/[0.05]',
                             )}
                         >
                             {iv.label}
@@ -533,38 +531,38 @@ function FuturesChart({ pair, interval, onIntervalChange, liveKline }: FuturesCh
                     ))}
                 </div>
 
-                <div className="w-px h-4 bg-gray-800" />
+                <div className="w-px h-4 bg-white/[0.08]" />
 
                 {/* Indicator toggles */}
-                <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-gray-600 uppercase tracking-wider mr-0.5">Ind</span>
-                    <IndBtn label="RSI"  active={showRSI}  color="text-violet-400 border-violet-400/40" onClick={() => setShowRSI(v  => !v)} />
-                    <IndBtn label="MACD" active={showMACD} color="text-blue-400   border-blue-400/40"   onClick={() => setShowMACD(v => !v)} />
-                    <IndBtn label="BOLL" active={showBOLL} color="text-orange-400 border-orange-400/40" onClick={() => setShowBOLL(v => !v)} />
-                    <IndBtn label="KDJ"  active={showKDJ}  color="text-pink-400   border-pink-400/40"   onClick={() => setShowKDJ(v  => !v)} />
+                <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wider mr-1 font-bold">Ind</span>
+                    <IndBtn label="RSI"  active={showRSI}  color="text-violet-400 border-violet-400/40 bg-violet-500/5 hover:border-violet-400" onClick={() => setShowRSI(v  => !v)} />
+                    <IndBtn label="MACD" active={showMACD} color="text-cyan-400   border-cyan-400/40 bg-cyan-500/5 hover:border-cyan-400"   onClick={() => setShowMACD(v => !v)} />
+                    <IndBtn label="BOLL" active={showBOLL} color="text-amber-400 border-amber-400/40 bg-amber-500/5 hover:border-amber-400" onClick={() => setShowBOLL(v => !v)} />
+                    <IndBtn label="KDJ"  active={showKDJ}  color="text-pink-400   border-pink-400/40 bg-pink-500/5 hover:border-pink-400"   onClick={() => setShowKDJ(v  => !v)} />
                 </div>
 
                 {/* EMA legend */}
-                <div className="ml-auto flex items-center gap-2.5 text-[10px] font-mono">
-                    <span><span className="text-yellow-400">■</span> EMA7</span>
-                    <span><span className="text-blue-400">■</span> EMA25</span>
-                    <span><span className="text-pink-400">■</span> EMA99</span>
+                <div className="ml-auto flex items-center gap-3 text-[10px] font-mono text-gray-500 font-semibold">
+                    <span><span className="text-yellow-400 mr-1">■</span>EMA7</span>
+                    <span><span className="text-accent-cyan mr-1">■</span>EMA25</span>
+                    <span><span className="text-accent-purple mr-1">■</span>EMA99</span>
                 </div>
             </div>
 
-            {/* ── Chart area: drawing toolbar + chart ── */}
+            {/* ── Chart area ── */}
             <div className="flex flex-1 min-h-0">
                 <DrawingToolbar
                     activeTool={activeTool}
                     onSelect={handleToolSelect}
                     onClearAll={handleClearAll}
                 />
-                <div className="relative flex-1 min-w-0">
+                <div className="relative flex-1 min-w-0 bg-navy-950">
                     {loading && (
-                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-950/80">
+                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-navy-950/80 backdrop-blur-sm">
                             <div className="flex items-center gap-2 text-gray-400 text-sm">
-                                <RefreshCw size={16} className="animate-spin" />
-                                Loading chart…
+                                <RefreshCw size={16} className="animate-spin text-accent-cyan" />
+                                Loading chart data…
                             </div>
                         </div>
                     )}
@@ -572,13 +570,13 @@ function FuturesChart({ pair, interval, onIntervalChange, liveKline }: FuturesCh
 
                     {/* Active tool badge */}
                     {activeTool !== 'cursor' && (
-                        <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-indigo-600/90 text-white text-[11px] font-medium px-2 py-1 rounded-lg backdrop-blur-sm">
+                        <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-accent-cyan/20 border border-accent-cyan/30 text-accent-cyan text-[11px] font-bold px-2 py-1 rounded-lg backdrop-blur-md">
                             <span>
                                 {DRAWING_TOOLS.find(t => t.id === activeTool)?.label}
                             </span>
                             <button
                                 onClick={() => setActiveTool('cursor')}
-                                className="ml-0.5 opacity-70 hover:opacity-100 text-[10px]"
+                                className="ml-1 opacity-70 hover:opacity-100 text-[10px]"
                             >
                                 ✕
                             </button>
@@ -614,18 +612,18 @@ function DepthChart({ symbol }: DepthChartProps) {
     const midPrice = data.find(d => d.ask !== undefined && d.bid === undefined)?.price
 
     return (
-        <div className="flex flex-col h-full bg-gray-900 border-t border-gray-800">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Depth Chart</span>
+        <div className="flex flex-col h-full bg-navy-900 border-t border-white/[0.06]">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.06]">
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Depth Chart</span>
                 {midPrice && (
-                    <span className="text-[10px] font-mono text-gray-400">
-                        Mid <span className="text-white">{fmtPrice(midPrice, symbol)}</span>
+                    <span className="text-[10px] font-mono text-gray-500 font-semibold">
+                        Mid <span className="text-white font-bold">{fmtPrice(midPrice, symbol)}</span>
                     </span>
                 )}
             </div>
             <div className="flex-1 min-h-0 px-1 py-1">
                 {data.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-xs text-gray-600">Connecting…</div>
+                    <div className="flex items-center justify-center h-full text-xs text-gray-500 font-medium">Connecting...</div>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -642,15 +640,15 @@ function DepthChart({ symbol }: DepthChartProps) {
                             <XAxis
                                 dataKey="price" type="number" domain={['auto','auto']}
                                 tickFormatter={v => fmtPrice(Number(v), symbol)}
-                                tick={{ fontSize: 9, fill: '#6b7280' }}
+                                tick={{ fontSize: 9, fill: '#4b5563' }}
                                 tickLine={false} axisLine={false} scale="linear"
                             />
                             <YAxis
-                                tick={{ fontSize: 9, fill: '#6b7280' }} tickLine={false}
-                                axisLine={false} tickFormatter={v => fmt(Number(v))} width={40}
+                                tick={{ fontSize: 9, fill: '#4b5563' }} tickLine={false}
+                                axisLine={false} tickFormatter={v => fmt(Number(v))} width={35}
                             />
                             <Tooltip
-                                contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: 8, fontSize: 11 }}
+                                contentStyle={{ background: '#0a0e1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11 }}
                                 labelStyle={{ color: '#9ca3af' }}
                                 labelFormatter={v => `Price: ${fmtPrice(Number(v), symbol)}`}
                                 formatter={(value, name) => [fmt(Number(value)), name === 'bid' ? 'Cum. Bid' : 'Cum. Ask']}
@@ -702,23 +700,23 @@ function OrderBook({ symbol }: { symbol: string }) {
         ? ((bids[0].price + asks[asks.length - 1].price) / 2) : null
 
     return (
-        <div className="flex flex-col h-full bg-gray-900 border-l border-gray-800">
-            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-800">
+        <div className="flex flex-col h-full bg-navy-900 border-l border-white/[0.06]">
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06] bg-navy-950/40">
                 <Layers size={13} className="text-gray-500" />
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Order Book</span>
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Order Book</span>
             </div>
-            <div className="grid grid-cols-3 px-3 py-1 text-[10px] text-gray-600 uppercase tracking-wider">
+            <div className="grid grid-cols-3 px-3 py-1.5 text-[9px] text-gray-500 uppercase tracking-wider border-b border-white/[0.03] font-bold">
                 <span>Price</span><span className="text-right">Size</span><span className="text-right">Total</span>
             </div>
-            <div className="flex-1 overflow-hidden flex flex-col-reverse">
+            <div className="flex-1 overflow-hidden flex flex-col-reverse justify-end">
                 {asks.map((a, i) => (
                     <OrderRow key={i} level={a} side="ask" maxTotal={maxTotal} symbol={symbol} />
                 ))}
             </div>
             {midPrice && (
-                <div className="px-3 py-1.5 bg-gray-800/50 border-y border-gray-700/50 text-center">
+                <div className="px-3 py-1.5 bg-white/[0.02] border-y border-white/[0.06] text-center backdrop-blur-sm">
                     <span className="text-xs font-mono font-bold text-white">{fmtPrice(midPrice, symbol)}</span>
-                    <span className="text-[10px] text-gray-500 ml-1.5">Mid</span>
+                    <span className="text-[9px] text-gray-500 ml-1.5 font-bold uppercase">Mid</span>
                 </div>
             )}
             <div className="flex-1 overflow-hidden flex flex-col">
@@ -733,14 +731,14 @@ function OrderBook({ symbol }: { symbol: string }) {
 function OrderRow({ level, side, maxTotal, symbol }: { level: DepthLevel; side: 'bid'|'ask'; maxTotal: number; symbol: string }) {
     const pct = maxTotal > 0 ? (level.total / maxTotal) * 100 : 0
     return (
-        <div className="relative grid grid-cols-3 px-3 py-[3px] hover:bg-gray-800/40 transition-colors text-[11px] font-mono cursor-pointer">
-            <div className={cn('absolute inset-y-0 right-0 opacity-20', side === 'bid' ? 'bg-emerald-500' : 'bg-red-500')}
+        <div className="relative grid grid-cols-3 px-3 py-[3.5px] hover:bg-white/[0.03] transition-colors text-[11px] font-mono cursor-pointer">
+            <div className={cn('absolute inset-y-0 right-0 opacity-10 transition-all duration-300', side === 'bid' ? 'bg-emerald-500' : 'bg-red-500')}
                 style={{ width: `${pct}%` }} />
-            <span className={cn('relative z-10 font-semibold', side === 'bid' ? 'text-emerald-400' : 'text-red-400')}>
+            <span className={cn('relative z-10 font-bold', side === 'bid' ? 'text-emerald-400' : 'text-red-400')}>
                 {fmtPrice(level.price, symbol)}
             </span>
-            <span className="relative z-10 text-right text-gray-300">{level.qty.toFixed(4)}</span>
-            <span className="relative z-10 text-right text-gray-500">{level.total.toFixed(2)}</span>
+            <span className="relative z-10 text-right text-gray-300 font-medium">{level.qty.toFixed(4)}</span>
+            <span className="relative z-10 text-right text-gray-500 font-medium">{level.total.toFixed(2)}</span>
         </div>
     )
 }
@@ -760,10 +758,8 @@ function RecentTrades({ symbol }: { symbol: string }) {
     useBinanceStream<TradeMsg>(`${symbol.toLowerCase()}@trade`, (data) => {
         const price = parseFloat(data.p)
         const qty   = parseFloat(data.q)
-        // Discard malformed messages
         if (!data.t || isNaN(price) || isNaN(qty) || price <= 0 || qty <= 0) return
-        // Robust dedup: scan whole buffer (≤60 items, O(n) trivial).
-        // Catches network duplicates and any case where the same trade ID arrives twice.
+        // scan buffer (≤60 items, O(n) trivial) for robust dedup
         for (let i = 0; i < bufferRef.current.length; i++) {
             if (bufferRef.current[i].id === data.t) return
         }
@@ -774,7 +770,6 @@ function RecentTrades({ symbol }: { symbol: string }) {
     useEffect(() => {
         timerRef.current = setInterval(() => {
             if (bufferRef.current.length === 0) return
-            // Defensive: dedup again when committing to state so React never sees duplicate keys
             const seen = new Set<number>()
             const unique: RecentTrade[] = []
             for (const t of bufferRef.current) {
@@ -789,17 +784,17 @@ function RecentTrades({ symbol }: { symbol: string }) {
     }, [])
 
     return (
-        <div className="flex flex-col bg-gray-900 border-t border-gray-800">
-            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-800">
+        <div className="flex flex-col bg-navy-900 border-t border-white/[0.06] h-full">
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06] bg-navy-950/40">
                 <Activity size={13} className="text-gray-500" />
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Trades</span>
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Recent Trades</span>
             </div>
-            <div className="grid grid-cols-3 px-3 py-1 text-[10px] text-gray-600 uppercase tracking-wider">
+            <div className="grid grid-cols-3 px-3 py-1.5 text-[9px] text-gray-500 uppercase tracking-wider border-b border-white/[0.03] font-bold">
                 <span>Price</span><span className="text-right">Amount</span><span className="text-right">Time</span>
             </div>
-            <div className="overflow-y-auto" style={{ maxHeight: '220px' }}>
+            <div className="overflow-y-auto flex-1 custom-scrollbar">
                 {trades.length === 0 ? (
-                    <div className="flex items-center justify-center py-8 text-xs text-gray-600">Waiting for trades…</div>
+                    <div className="flex items-center justify-center py-10 text-xs text-gray-500 font-medium">Waiting for trades...</div>
                 ) : (
                     trades.map(t => <TradeRow key={t.id} trade={t} symbol={symbol} />)
                 )}
@@ -813,10 +808,10 @@ function TradeRow({ trade, symbol }: { trade: RecentTrade; symbol: string }) {
         ? new Date(trade.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
         : '—'
     return (
-        <div className={cn('grid grid-cols-3 px-3 py-[3px] text-[11px] font-mono hover:bg-gray-800/30 transition-colors')}>
-            <span className={trade.isSell ? 'text-red-400' : 'text-emerald-400'}>{fmtPrice(trade.price, symbol)}</span>
-            <span className="text-right text-gray-400">{trade.qty.toFixed(4)}</span>
-            <span className="text-right text-gray-600">{time}</span>
+        <div className="grid grid-cols-3 px-3 py-[4px] text-[11px] font-mono hover:bg-white/[0.03] transition-colors duration-150">
+            <span className={cn('font-bold', trade.isSell ? 'text-red-400' : 'text-emerald-400')}>{fmtPrice(trade.price, symbol)}</span>
+            <span className="text-right text-gray-300 font-medium">{trade.qty.toFixed(4)}</span>
+            <span className="text-right text-gray-500 font-semibold">{time}</span>
         </div>
     )
 }
@@ -917,9 +912,9 @@ function TradingPanel({ pair, livePrice }: TradingPanelProps) {
     const canSubmit = !submitting && qty > 0 && !insufficientBuy && !insufficientSell
 
     return (
-        <div className="flex flex-col bg-gray-900 border-l border-gray-800 h-full">
+        <div className="flex flex-col bg-navy-900 border-l border-white/[0.06] h-full relative z-10">
             {/* Tabs */}
-            <div className="flex border-b border-gray-800">
+            <div className="flex border-b border-white/[0.06] bg-navy-950/40">
                 {(['order', 'Orders'] as const).map((_, i) => {
                     const key   = i === 0 ? 'order' : 'history' as const
                     const label = i === 0 ? 'Place Order' : 'Orders'
@@ -928,15 +923,15 @@ function TradingPanel({ pair, livePrice }: TradingPanelProps) {
                             key={key}
                             onClick={() => setPanelTab(key)}
                             className={cn(
-                                'flex-1 px-3 py-2.5 text-xs font-medium border-b-2 transition',
+                                'flex-1 px-3 py-2.5 text-xs font-bold border-b-2 transition-all duration-200 relative',
                                 panelTab === key
-                                    ? 'border-indigo-500 text-indigo-400'
+                                    ? 'border-accent-cyan text-accent-cyan'
                                     : 'border-transparent text-gray-500 hover:text-gray-300',
                             )}
                         >
                             {label}
                             {key === 'history' && recentOrders.length > 0 && (
-                                <span className="ml-1 bg-gray-700 text-gray-400 text-[10px] px-1.5 py-0.5 rounded-full">
+                                <span className="ml-1.5 bg-navy-700 text-accent-cyan text-[9px] px-1.5 py-0.5 rounded-full font-bold border border-accent-cyan/20">
                                     {recentOrders.length}
                                 </span>
                             )}
@@ -947,28 +942,28 @@ function TradingPanel({ pair, livePrice }: TradingPanelProps) {
 
             {/* Order History */}
             {panelTab === 'history' && (
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {!walletId ? (
-                        <p className="text-center text-xs text-gray-600 py-10">Chọn ví để xem lịch sử</p>
+                        <p className="text-center text-xs text-gray-500 py-10 font-medium">Chọn ví để xem lịch sử</p>
                     ) : recentOrders.length === 0 ? (
-                        <p className="text-center text-xs text-gray-600 py-10">Chưa có lệnh {pair.base}</p>
+                        <p className="text-center text-xs text-gray-500 py-10 font-medium">Chưa có lệnh {pair.base}</p>
                     ) : (
-                        <div className="divide-y divide-gray-800/60">
-                            <div className="grid grid-cols-3 px-3 py-1.5 text-[10px] text-gray-600 uppercase tracking-wider">
-                                <span>Side / Price</span><span className="text-right">Qty</span><span className="text-right">Total</span>
+                        <div className="divide-y divide-white/[0.04]">
+                            <div className="grid grid-cols-3 px-3 py-2 text-[9px] text-gray-500 uppercase tracking-wider font-bold border-b border-white/[0.03]">
+                                <span>Side/Price</span><span className="text-right">Qty</span><span className="text-right">Total</span>
                             </div>
                             {recentOrders.map(tx => {
                                 const isBuy = tx.type === 1
                                 return (
-                                    <div key={tx.id} className="grid grid-cols-3 px-3 py-2 text-[11px] font-mono hover:bg-gray-800/30 transition-colors">
+                                    <div key={tx.id} className="grid grid-cols-3 px-3 py-2 text-[11px] font-mono hover:bg-white/[0.02] transition-colors duration-150">
                                         <div>
-                                            <span className={cn('font-semibold', isBuy ? 'text-emerald-400' : 'text-red-400')}>
+                                            <span className={cn('font-bold text-xs', isBuy ? 'text-emerald-400' : 'text-red-400')}>
                                                 {isBuy ? 'BUY' : 'SELL'}
                                             </span>
-                                            <p className="text-gray-500 text-[10px]">{formatUSD(tx.pricePerCoin)}</p>
+                                            <p className="text-gray-500 text-[10px] font-medium">{formatUSD(tx.pricePerCoin)}</p>
                                         </div>
-                                        <span className="text-right text-gray-300 self-center">{tx.quantity.toFixed(4)}</span>
-                                        <span className="text-right text-gray-400 self-center">{formatUSD(tx.totalAmount)}</span>
+                                        <span className="text-right text-gray-300 self-center font-medium">{tx.quantity.toFixed(4)}</span>
+                                        <span className="text-right text-gray-400 self-center font-bold">{formatUSD(tx.totalAmount)}</span>
                                     </div>
                                 )
                             })}
@@ -979,18 +974,20 @@ function TradingPanel({ pair, livePrice }: TradingPanelProps) {
 
             {/* Place Order */}
             {panelTab === 'order' && (
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                     {/* Buy / Sell */}
-                    <div className="grid grid-cols-2 gap-1 bg-gray-800 p-1 rounded-xl">
+                    <div className="grid grid-cols-2 gap-1 bg-navy-950 p-1 rounded-xl border border-white/[0.04]">
                         {(['buy', 'sell'] as const).map(s => (
                             <button
                                 key={s}
                                 onClick={() => { setSide(s); setAmount('') }}
                                 className={cn(
-                                    'py-2 text-sm font-bold rounded-lg transition',
+                                    'py-2 text-xs font-bold rounded-lg transition-all duration-200 uppercase tracking-wider',
                                     side === s
-                                        ? s === 'buy' ? 'bg-emerald-600 text-white shadow' : 'bg-red-600 text-white shadow'
-                                        : 'text-gray-400 hover:text-gray-200',
+                                        ? s === 'buy'
+                                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-glow-profit'
+                                            : 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-glow-loss'
+                                        : 'text-gray-500 hover:text-gray-300',
                                 )}
                             >
                                 {s === 'buy' ? 'Long / Buy' : 'Short / Sell'}
@@ -999,14 +996,14 @@ function TradingPanel({ pair, livePrice }: TradingPanelProps) {
                     </div>
 
                     {/* Order type */}
-                    <div className="grid grid-cols-2 gap-1">
+                    <div className="grid grid-cols-2 gap-1 bg-navy-950/60 p-1 rounded-xl border border-white/[0.04]">
                         {(['market', 'limit'] as const).map(t => (
                             <button key={t} onClick={() => setOrderType(t)}
                                 className={cn(
-                                    'py-1.5 text-xs font-medium rounded-lg border transition capitalize',
+                                    'py-1.5 text-xs font-bold rounded-lg transition-all duration-200 capitalize',
                                     orderType === t
-                                        ? 'border-indigo-500 text-indigo-400 bg-indigo-500/10'
-                                        : 'border-gray-700 text-gray-500 hover:border-gray-600',
+                                        ? 'bg-white/[0.08] text-white border border-white/[0.08]'
+                                        : 'text-gray-500 hover:text-gray-300',
                                 )}
                             >{t}</button>
                         ))}
@@ -1014,70 +1011,73 @@ function TradingPanel({ pair, livePrice }: TradingPanelProps) {
 
                     {/* Wallet selector */}
                     {wallets && wallets.length > 0 && (
-                        <div className="space-y-1">
-                            <label className="text-xs text-gray-500">Ví giao dịch</label>
-                            <select
-                                value={walletId}
-                                onChange={e => setWalletId(e.target.value)}
-                                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white focus:border-indigo-500 focus:outline-none"
-                            >
-                                {wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                            </select>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Trading Wallet</label>
+                            <div className="relative">
+                                <select
+                                    value={walletId}
+                                    onChange={e => setWalletId(e.target.value)}
+                                    className="w-full px-3 py-2 bg-navy-950 border border-white/[0.08] rounded-xl text-sm text-white focus:border-accent-cyan/40 focus:outline-none transition-all duration-200 appearance-none font-medium"
+                                >
+                                    {wallets.map(w => <option key={w.id} value={w.id} className="bg-navy-900">{w.name}</option>)}
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                            </div>
                         </div>
                     )}
 
                     {/* Available balance */}
                     <div className={cn(
-                        'flex items-center justify-between rounded-xl px-3 py-2 text-xs',
-                        side === 'buy' ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-red-500/5 border border-red-500/20',
+                        'flex items-center justify-between rounded-xl px-3 py-2.5 text-xs border backdrop-blur-md',
+                        side === 'buy' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10',
                     )}>
-                        <span className="text-gray-500">{side === 'buy' ? 'Số dư khả dụng' : `${pair.base} đang có`}</span>
-                        <span className={cn('font-mono font-semibold', side === 'buy' ? 'text-emerald-400' : 'text-red-400')}>
+                        <span className="text-gray-500 font-semibold">{side === 'buy' ? 'Available Balance' : `${pair.base} Owned`}</span>
+                        <span className={cn('font-mono font-bold text-xs', side === 'buy' ? 'text-emerald-400' : 'text-red-400')}>
                             {side === 'buy' ? formatUSD(availableFiat) : `${availableCoin > 0 ? availableCoin.toFixed(6) : '0'} ${pair.base}`}
                         </span>
                     </div>
 
                     {/* Price */}
-                    <div className="space-y-1">
-                        <label className="text-xs text-gray-500">Giá {orderType === 'market' ? '(Market)' : '(Limit)'}</label>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Price ({orderType === 'market' ? 'Market' : 'Limit'})</label>
                         {orderType === 'market' ? (
-                            <div className="px-3 py-2.5 bg-gray-800/60 border border-gray-700 rounded-xl text-sm font-mono text-gray-400">
-                                {livePrice ? fmtPrice(livePrice, pair.symbol) : '—'} USDT
+                            <div className="px-3 py-2.5 bg-navy-950 border border-white/[0.04] rounded-xl text-sm font-mono text-gray-400 font-bold">
+                                {livePrice ? fmtPrice(livePrice, pair.symbol) : '—'} <span className="text-gray-500 font-sans text-xs ml-1">USDT</span>
                             </div>
                         ) : (
                             <div className="relative">
                                 <input
                                     type="number" value={limitPrice} onChange={e => setLimitPrice(e.target.value)}
                                     placeholder={livePrice ? fmtPrice(livePrice, pair.symbol) : '0.00'}
-                                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 hover:border-gray-600 focus:border-indigo-500 focus:outline-none rounded-xl text-sm font-mono text-white placeholder-gray-600 transition"
+                                    className="w-full px-3 py-2.5 bg-navy-950 border border-white/[0.08] hover:border-white/[0.15] focus:border-accent-cyan/40 focus:outline-none rounded-xl text-sm font-mono text-white placeholder-gray-600 transition duration-200"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">USDT</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-bold font-sans">USDT</span>
                             </div>
                         )}
                     </div>
 
                     {/* Amount */}
-                    <div className="space-y-1">
-                        <label className="text-xs text-gray-500">Số lượng ({pair.base})</label>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Amount ({pair.base})</label>
                         <div className="relative">
                             <input
                                 type="number" value={amount} onChange={e => setAmount(e.target.value)}
                                 placeholder="0.00000"
                                 className={cn(
-                                    'w-full px-3 py-2.5 bg-gray-800 border rounded-xl text-sm font-mono text-white placeholder-gray-600 transition focus:outline-none',
+                                    'w-full px-3 py-2.5 bg-navy-950 border rounded-xl text-sm font-mono text-white placeholder-gray-600 transition duration-200 focus:outline-none',
                                     (insufficientBuy || insufficientSell)
-                                        ? 'border-red-500/60 focus:border-red-500'
-                                        : 'border-gray-700 hover:border-gray-600 focus:border-indigo-500',
+                                        ? 'border-red-500/50 focus:border-red-500'
+                                        : 'border-white/[0.08] hover:border-white/[0.15] focus:border-accent-cyan/40',
                                 )}
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{pair.base}</span>
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-bold font-sans">{pair.base}</span>
                         </div>
-                        {insufficientBuy  && <p className="text-[11px] text-red-400">Không đủ USDT — cần thêm {formatUSD(total - availableFiat)}</p>}
-                        {insufficientSell && <p className="text-[11px] text-red-400">Vượt số dư — chỉ có {availableCoin.toFixed(6)} {pair.base}</p>}
-                        <div className="grid grid-cols-4 gap-1 mt-1">
+                        {insufficientBuy  && <p className="text-[11px] text-red-400 font-semibold mt-1">Insufficient USDT — needs {formatUSD(total - availableFiat)} more</p>}
+                        {insufficientSell && <p className="text-[11px] text-red-400 font-semibold mt-1">Exceeds balance — only {availableCoin.toFixed(6)} {pair.base} owned</p>}
+                        <div className="grid grid-cols-4 gap-1 mt-2">
                             {[25, 50, 75, 100].map(p => (
                                 <button key={p} onClick={() => fillPercent(p)}
-                                    className="py-1 text-[10px] text-gray-500 hover:text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition">
+                                    className="py-1 text-[10px] text-gray-400 font-bold bg-navy-950 hover:bg-white/[0.05] border border-white/[0.04] rounded-lg transition duration-150">
                                     {p}%
                                 </button>
                             ))}
@@ -1085,18 +1085,18 @@ function TradingPanel({ pair, livePrice }: TradingPanelProps) {
                     </div>
 
                     {/* Summary */}
-                    <div className="bg-gray-800/50 rounded-xl p-3 space-y-1.5 text-xs">
+                    <div className="bg-navy-950/80 border border-white/[0.04] rounded-xl p-3.5 space-y-2 text-xs">
                         <div className="flex justify-between">
-                            <span className="text-gray-500">Tổng giá trị</span>
-                            <span className="text-white font-mono">{total > 0 ? formatUSD(total) : '—'}</span>
+                            <span className="text-gray-500 font-semibold">Total Value</span>
+                            <span className="text-white font-mono font-bold">{total > 0 ? formatUSD(total) : '—'}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-500">Fee (0.1%)</span>
-                            <span className="text-gray-400 font-mono">{total > 0 ? formatUSD(total * 0.001) : '—'}</span>
+                            <span className="text-gray-500 font-semibold">Fee (0.1%)</span>
+                            <span className="text-gray-400 font-mono font-medium">{total > 0 ? formatUSD(total * 0.001) : '—'}</span>
                         </div>
-                        <div className="flex justify-between border-t border-gray-700 pt-1.5 mt-1.5">
-                            <span className="text-gray-400">Nhận về</span>
-                            <span className="font-mono font-semibold text-white">
+                        <div className="flex justify-between border-t border-white/[0.06] pt-2 mt-2">
+                            <span className="text-gray-400 font-bold">Estimated Return</span>
+                            <span className="font-mono font-bold text-white text-xs">
                                 {side === 'buy'
                                     ? (qty > 0 ? `${qty.toFixed(6)} ${pair.base}` : '—')
                                     : (total > 0 ? formatUSD(total * 0.999) : '—')}
@@ -1108,18 +1108,18 @@ function TradingPanel({ pair, livePrice }: TradingPanelProps) {
                     <button
                         onClick={handleSubmit} disabled={!canSubmit}
                         className={cn(
-                            'w-full py-3 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2',
+                            'w-full py-3 rounded-xl text-sm font-bold transition duration-200 flex items-center justify-center gap-2 uppercase tracking-wider',
                             side === 'buy'
-                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white disabled:bg-emerald-900/40 disabled:text-emerald-700 disabled:cursor-not-allowed'
-                                : 'bg-red-600 hover:bg-red-500 text-white disabled:bg-red-900/40 disabled:text-red-700 disabled:cursor-not-allowed',
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-white disabled:from-emerald-900/20 disabled:to-teal-900/20 disabled:text-emerald-700 disabled:cursor-not-allowed border border-emerald-500/20'
+                                : 'bg-gradient-to-r from-red-500 to-rose-500 hover:brightness-110 text-white disabled:from-red-900/20 disabled:to-rose-900/20 disabled:text-red-700 disabled:cursor-not-allowed border border-red-500/20',
                         )}
                     >
                         {submitting && <RefreshCw size={14} className="animate-spin" />}
-                        {side === 'buy' ? 'Mua' : 'Bán'} {pair.base}
+                        {side === 'buy' ? 'Buy / Long' : 'Sell / Short'} {pair.base}
                     </button>
 
-                    <p className="text-[10px] text-gray-600 text-center leading-relaxed">
-                        Paper trading — giao dịch giả lập, không dùng tiền thật.
+                    <p className="text-[10px] text-gray-500 text-center leading-relaxed font-medium">
+                        Paper Trading — simulated execution only. No actual funds are used.
                     </p>
                 </div>
             )}
@@ -1172,13 +1172,13 @@ export function FuturesPage() {
     }, [pair.symbol, interval])
 
     return (
-        <div className="flex flex-col flex-1 bg-gray-950 overflow-hidden">
+        <div className="flex flex-col flex-1 bg-navy-950 overflow-hidden h-full">
             <SymbolHeader
                 pair={pair} tick={tick} flash={flash}
                 onSelectPair={p => { setPair(p); setTick(null); setLiveKline(null) }}
             />
 
-            <div className="flex flex-1 min-h-0">
+            <div className="flex flex-1 min-h-0 relative">
                 {/* ── Chart + bottom tab ── */}
                 <div className={cn('flex flex-col flex-1 min-w-0', mobileTab !== 'chart' ? 'hidden md:flex' : 'flex')}>
                     <div className="flex-1 min-h-0">
@@ -1191,17 +1191,17 @@ export function FuturesPage() {
                     </div>
 
                     {/* Trades | Depth tab */}
-                    <div className="flex flex-col shrink-0" style={{ height: '260px' }}>
-                        <div className="flex border-t border-gray-800 bg-gray-900">
+                    <div className="flex flex-col shrink-0 bg-navy-900 border-t border-white/[0.06]" style={{ height: '260px' }}>
+                        <div className="flex bg-navy-950/40 border-b border-white/[0.03]">
                             {([
                                 { key: 'trades' as const, label: 'Trades'      },
                                 { key: 'depth'  as const, label: 'Depth Chart' },
                             ]).map(t => (
                                 <button key={t.key} onClick={() => setBottomTab(t.key)}
                                     className={cn(
-                                        'px-4 py-2 text-xs font-medium border-b-2 transition',
+                                        'px-5 py-2.5 text-xs font-bold border-b-2 transition-all duration-200',
                                         bottomTab === t.key
-                                            ? 'border-indigo-500 text-indigo-400'
+                                            ? 'border-accent-cyan text-accent-cyan bg-white/[0.02]'
                                             : 'border-transparent text-gray-500 hover:text-gray-300',
                                     )}
                                 >{t.label}</button>
@@ -1228,7 +1228,7 @@ export function FuturesPage() {
             </div>
 
             {/* Mobile tab bar */}
-            <div className="md:hidden flex border-t border-gray-800 bg-gray-900 shrink-0">
+            <div className="md:hidden flex border-t border-white/[0.06] bg-navy-900 shrink-0">
                 {([
                     { key: 'chart' as const, label: '📈 Chart' },
                     { key: 'book'  as const, label: '📖 Book'  },
@@ -1236,8 +1236,8 @@ export function FuturesPage() {
                 ]).map(t => (
                     <button key={t.key} onClick={() => setMobileTab(t.key)}
                         className={cn(
-                            'flex-1 py-3 text-xs font-medium transition',
-                            mobileTab === t.key ? 'text-indigo-400 bg-indigo-500/10' : 'text-gray-500 hover:text-gray-300',
+                            'flex-1 py-3 text-xs font-bold transition-all duration-200 border-t border-transparent',
+                            mobileTab === t.key ? 'text-accent-cyan bg-white/[0.03] border-accent-cyan' : 'text-gray-500 hover:text-gray-300',
                         )}
                     >{t.label}</button>
                 ))}

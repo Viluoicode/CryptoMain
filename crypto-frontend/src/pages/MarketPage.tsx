@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
     Search, TrendingUp, TrendingDown, ChevronRight,
     ChevronUp, ChevronDown, ChevronsUpDown,
-    Star, RefreshCw, Wifi, WifiOff, Flame,
+    Star, RefreshCw, Flame,
 } from 'lucide-react'
 import { getTopCryptos } from '@/api/crypto'
 import { formatUSD, formatPct, formatMarketCap } from '@/lib/format'
@@ -17,8 +17,12 @@ import { useAuth } from '@/hooks/useAuth'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import type { CryptoListResponse } from '@/types'
 import type { LiveTick } from '@/store/livePriceStore'
+import { Button } from '@/components/ui/Button'
+import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Tabs } from '@/components/ui/Tabs'
+import { Skeleton } from '@/components/ui/Skeleton'
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
 type SortKey = 'marketCap' | 'currentPrice' | 'priceChangePercentage24h' | 'totalVolume'
 type SortDir = 'asc' | 'desc'
 type MainTab = 'favorites' | 'spot' | 'futures'
@@ -39,10 +43,7 @@ const SUB_TABS: { id: SubTab; label: string }[] = [
     { id: 'defi',  label: 'DeFi' },
 ]
 
-// 7 pairs that are tradeable on /trade
 const FUTURES_COINS = new Set(['bitcoin', 'ethereum', 'binancecoin', 'solana', 'ripple', 'cardano', 'dogecoin'])
-
-// Simple category mapping by symbol — heuristic, no backend needed
 const MEME_COINS  = new Set(['doge', 'shib', 'pepe', 'wif', 'bonk', 'floki', 'trump', 'mog', 'memecoin'])
 const RWA_COINS   = new Set(['ondo', 'pendle', 'mkr', 'rsr', 'rwa', 'plume'])
 const LAYER_COINS = new Set(['btc', 'eth', 'sol', 'bnb', 'avax', 'matic', 'pol', 'arb', 'op', 'sui', 'apt', 'near', 'atom', 'dot', 'ada', 'icp', 'tia', 'sei', 'inj', 'stx', 'base', 'mantle', 'mnt'])
@@ -59,12 +60,10 @@ function applySubFilter(coins: CryptoListResponse[], sub: SubTab): CryptoListRes
     return coins.filter(c => set.has(c.symbol.toLowerCase()))
 }
 
-// ─── Sparkline (mini SVG chart) ────────────────────────────────────────────────
 function Sparkline({ data, positive }: { data?: number[] | null; positive: boolean }) {
     if (!data || data.length < 2) {
-        return <div className="w-24 h-8 opacity-30 text-xs text-gray-600 flex items-center justify-end">—</div>
+        return <div className="w-24 h-8 opacity-30 text-xs text-gray-500 flex items-center justify-end font-semibold">—</div>
     }
-    // Downsample to 30 points if larger
     const points = data.length > 30
         ? Array.from({ length: 30 }, (_, i) => data[Math.floor(i * data.length / 30)])
         : data
@@ -81,7 +80,7 @@ function Sparkline({ data, positive }: { data?: number[] | null; positive: boole
     }).join(' ')
 
     const stroke = positive ? '#10b981' : '#ef4444'
-    const fill = positive ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)'
+    const fill = positive ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'
     const lastX = w
     const lastY = h - ((points[points.length - 1] - min) / range) * h
 
@@ -94,7 +93,6 @@ function Sparkline({ data, positive }: { data?: number[] | null; positive: boole
     )
 }
 
-// ─── Highlight card (Gainers / Losers / Volume) ───────────────────────────────
 function HighlightCard({
     title, icon, items, accent, onClickItem, type,
 }: {
@@ -105,25 +103,25 @@ function HighlightCard({
     onClickItem: (id: string) => void
     type: 'gain' | 'loss' | 'volume'
 }) {
-    const headerBg =
-        accent === 'green' ? 'bg-gradient-to-r from-emerald-900/40 via-emerald-900/20 to-transparent border-emerald-800/40'
-      : accent === 'red'   ? 'bg-gradient-to-r from-red-900/40 via-red-900/20 to-transparent border-red-800/40'
-                           : 'bg-gradient-to-r from-amber-900/40 via-amber-900/20 to-transparent border-amber-800/40'
+    const glowClass =
+        accent === 'green' ? 'hover:border-emerald-500/20 hover:shadow-glow-profit' :
+        accent === 'red' ? 'hover:border-red-500/20 hover:shadow-glow-loss' :
+        'hover:border-amber-500/20 hover:shadow-glow'
+
     const accentText =
-        accent === 'green' ? 'text-emerald-400'
-      : accent === 'red'   ? 'text-red-400'
-                           : 'text-amber-400'
+        accent === 'green' ? 'text-profit' :
+        accent === 'red' ? 'text-loss' :
+        'text-amber-400'
 
     return (
-        <div className="group bg-gray-900/70 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition">
-            <div className={cn('flex items-center justify-between px-4 py-3 border-b', headerBg)}>
-                <div className="flex items-center gap-2">
-                    <span className={accentText}>{icon}</span>
-                    <span className="text-sm font-semibold text-white">{title}</span>
-                </div>
-                <ChevronRight size={14} className="text-gray-500 group-hover:text-gray-300 transition" />
-            </div>
-            <div className="divide-y divide-gray-800/60">
+        <Card className={cn('p-0 overflow-hidden transition-all duration-300', glowClass)}>
+            <CardHeader className="px-4 py-3 border-b border-white/[0.06] mb-0 bg-white/[0.01]">
+                <CardTitle icon={icon} className="text-sm font-semibold text-white">
+                    {title}
+                </CardTitle>
+                <ChevronRight size={14} className="text-gray-500 group-hover:text-gray-300" />
+            </CardHeader>
+            <div className="divide-y divide-white/[0.04]">
                 {items.map(coin => {
                     const display =
                         type === 'volume'
@@ -133,19 +131,19 @@ function HighlightCard({
                         <button
                             key={coin.id}
                             onClick={() => onClickItem(coin.id)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-800/40 transition text-left"
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition text-left"
                         >
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <img src={coin.image} alt="" className="w-5 h-5 rounded-full shrink-0" />
-                                <span className="text-sm font-medium text-white truncate uppercase">
+                                <span className="text-xs font-semibold text-gray-300 truncate uppercase">
                                     {coin.symbol}USDT
                                 </span>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
-                                <span className="text-xs font-mono text-gray-300">
+                                <span className="text-xs font-semibold font-mono text-white">
                                     {formatUSD(coin.currentPrice, coin.currentPrice >= 1 ? 2 : 6)}
                                 </span>
-                                <span className={cn('text-xs font-semibold font-mono w-20 text-right', accentText)}>
+                                <span className={cn('text-xs font-bold font-mono w-20 text-right', accentText)}>
                                     {display}
                                 </span>
                             </div>
@@ -153,33 +151,10 @@ function HighlightCard({
                     )
                 })}
             </div>
-        </div>
+        </Card>
     )
 }
 
-// ─── Live status badge ────────────────────────────────────────────────────────
-function LiveBadge({ connected }: { connected: boolean }) {
-    return (
-        <div className={cn(
-            'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-500',
-            connected
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                : 'bg-gray-800 border-gray-700 text-gray-500',
-        )}>
-            {connected ? (
-                <>
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-                    </span>
-                    <Wifi size={11} />LIVE
-                </>
-            ) : (<><WifiOff size={11} />Offline</>)}
-        </div>
-    )
-}
-
-// ─── Sort column header ───────────────────────────────────────────────────────
 function SortTh({ col, label, sortKey, sortDir, onSort, align = 'right' }: {
     col: SortKey; label: string; sortKey: SortKey; sortDir: SortDir
     onSort: (col: SortKey) => void; align?: 'left' | 'right'
@@ -187,10 +162,10 @@ function SortTh({ col, label, sortKey, sortDir, onSort, align = 'right' }: {
     const active = col === sortKey
     return (
         <th
-            className={cn('px-4 py-3 cursor-pointer select-none', align === 'right' ? 'text-right' : 'text-left')}
+            className={cn('px-4 py-3.5 cursor-pointer select-none', align === 'right' ? 'text-right' : 'text-left')}
             onClick={() => onSort(col)}
         >
-            <div className={cn('inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide transition-colors', active ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300')}>
+            <div className={cn('inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors', active ? 'text-accent-cyan' : 'text-gray-500 hover:text-gray-350')}>
                 {label}
                 {active
                     ? sortDir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
@@ -201,7 +176,6 @@ function SortTh({ col, label, sortKey, sortDir, onSort, align = 'right' }: {
     )
 }
 
-// ─── Coin row ─────────────────────────────────────────────────────────────────
 function CoinRow({ coin, onClick, onTrade, isWatched, onToggleWatch, liveTick, canTrade }: {
     coin: CryptoListResponse
     onClick: () => void
@@ -228,79 +202,79 @@ function CoinRow({ coin, onClick, onTrade, isWatched, onToggleWatch, liveTick, c
         prevPriceRef.current = liveTick.price
         const t = setTimeout(() => setFlash(null), 700)
         return () => clearTimeout(t)
-    }, [liveTick?.price]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [liveTick?.price])
 
     return (
         <tr
             onClick={onClick}
-            className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors duration-150 cursor-pointer group"
+            className="border-b border-white/[0.04] hover:bg-white/[0.02] transition cursor-pointer group"
         >
             {/* Watch + Coin */}
-            <td className="pl-4 py-3">
-                <div className="flex items-center gap-2.5">
+            <td className="pl-4 py-4">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={onToggleWatch}
                         title={isWatched ? 'Bỏ theo dõi' : 'Thêm watchlist'}
-                        className="p-1 rounded hover:bg-amber-500/10 transition"
+                        className="p-1.5 rounded-lg hover:bg-amber-500/10 transition"
                     >
                         <Star
-                            size={13}
+                            size={14}
                             className={cn(isWatched ? 'text-amber-400 fill-amber-400' : 'text-gray-600 group-hover:text-gray-400')}
                         />
                     </button>
                     <img src={coin.image} alt={coin.name} loading="lazy" decoding="async" className="w-7 h-7 rounded-full shrink-0" />
                     <div className="min-w-0">
-                        <div className="flex items-baseline gap-1.5">
-                            <span className="font-semibold text-white text-sm uppercase">{coin.symbol}</span>
-                            <span className="text-gray-500 text-xs">USDT</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="font-bold text-white text-sm uppercase">{coin.symbol}</span>
+                            <span className="text-gray-500 text-[10px] font-semibold">USDT</span>
                         </div>
-                        <span className="text-[11px] text-gray-500 truncate block">{coin.name}</span>
+                        <span className="text-xs text-gray-500 truncate block -mt-0.5">{coin.name}</span>
                     </div>
                 </div>
             </td>
 
             {/* Price */}
             <td className={cn(
-                'px-4 py-3 text-right font-mono text-sm font-semibold transition-colors duration-500',
-                flash === 'up'   ? 'text-emerald-300 bg-emerald-500/10' :
-                flash === 'down' ? 'text-red-300 bg-red-500/10' :
+                'px-4 py-4 text-right font-mono text-sm font-semibold transition-colors duration-500',
+                flash === 'up'   ? 'text-emerald-400 bg-emerald-500/10' :
+                flash === 'down' ? 'text-red-400 bg-red-500/10' :
                 'text-white',
             )}>
                 {formatUSD(price, price >= 1 ? 2 : 6)}
             </td>
 
             {/* 24h % */}
-            <td className="px-4 py-3 text-right">
+            <td className="px-4 py-4 text-right">
                 <span className={cn(
-                    'inline-block text-xs font-semibold font-mono px-2 py-0.5 rounded',
-                    pos ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10',
+                    'inline-flex items-center justify-center text-xs font-bold font-mono px-2 py-0.5 rounded-md border border-current/10',
+                    pos ? 'text-profit bg-profit/10' : 'text-loss bg-loss/10',
                 )}>
                     {formatPct(change24h)}
                 </span>
             </td>
 
             {/* Low / High */}
-            <td className="px-4 py-3 text-right text-xs font-mono text-gray-400">
+            <td className="px-4 py-4 text-right text-xs font-mono text-gray-400">
                 <div>{formatUSD(low24h, low24h >= 1 ? 2 : 6)}</div>
                 <div className="text-gray-500 mt-0.5">{formatUSD(high24h, high24h >= 1 ? 2 : 6)}</div>
             </td>
 
             {/* Volume */}
-            <td className="px-4 py-3 text-right text-sm text-gray-400 font-mono">
+            <td className="px-4 py-4 text-right text-sm text-gray-405 font-mono">
                 {formatMarketCap(coin.totalVolume)}
             </td>
 
             {/* Sparkline */}
-            <td className="px-4 py-3">
+            <td className="px-4 py-4">
                 <Sparkline data={coin.sparkline7d} positive={pos} />
             </td>
 
             {/* Action */}
-            <td className="pr-4 py-3">
+            <td className="pr-4 py-4">
                 <div className="flex items-center justify-end gap-2">
                     <button
                         onClick={(e) => { e.stopPropagation(); onClick() }}
-                        className="text-xs text-gray-400 hover:text-white px-2.5 py-1 transition"
+                        className="text-xs font-semibold text-gray-400 hover:text-white px-2.5 py-1.5 transition"
                     >
                         Details
                     </button>
@@ -309,10 +283,10 @@ function CoinRow({ coin, onClick, onTrade, isWatched, onToggleWatch, liveTick, c
                         disabled={!canTrade}
                         title={canTrade ? 'Trade' : 'Coin chưa hỗ trợ trading'}
                         className={cn(
-                            'text-xs font-semibold px-3 py-1.5 rounded-lg transition',
+                            'text-xs font-bold px-3 py-1.5 rounded-xl transition',
                             canTrade
-                                ? 'bg-gray-800 hover:bg-indigo-600 text-white border border-gray-700 hover:border-indigo-600'
-                                : 'bg-gray-900 text-gray-600 border border-gray-800 cursor-not-allowed',
+                                ? 'bg-gradient-to-r from-accent-cyan to-accent-purple hover:shadow-glow text-white'
+                                : 'bg-white/[0.04] text-gray-600 border border-white/[0.04] cursor-not-allowed',
                         )}
                     >
                         Trade
@@ -323,32 +297,37 @@ function CoinRow({ coin, onClick, onTrade, isWatched, onToggleWatch, liveTick, c
     )
 }
 
-// ─── Skeleton ──────────────────────────────────────────────────────────────────
 function SkeletonRows() {
     return (
         <>
-            {Array.from({ length: 12 }).map((_, i) => (
-                <tr key={i} className="border-b border-gray-800/50">
-                    <td className="pl-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-3 h-3 bg-gray-800 animate-pulse rounded" />
-                            <div className="w-7 h-7 bg-gray-800 animate-pulse rounded-full" />
-                            <div className="w-20 h-3 bg-gray-800 animate-pulse rounded" />
+            {Array.from({ length: 10 }).map((_, i) => (
+                <tr key={i} className="border-b border-white/[0.04]">
+                    <td className="pl-4 py-4">
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="w-4 h-4 rounded" />
+                            <Skeleton className="w-7 h-7 rounded-full" />
+                            <div className="space-y-1.5">
+                                <Skeleton className="h-3 w-12" />
+                                <Skeleton className="h-2 w-16" />
+                            </div>
                         </div>
                     </td>
-                    <td className="px-4 py-3"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                    <td className="px-4 py-3"><div className="w-14 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                    <td className="px-4 py-3"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                    <td className="px-4 py-3"><div className="w-20 h-3 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                    <td className="px-4 py-3"><div className="w-24 h-8 bg-gray-800 animate-pulse rounded ml-auto" /></td>
-                    <td className="pr-4 py-3"><div className="w-20 h-7 bg-gray-800 animate-pulse rounded ml-auto" /></td>
+                    <td className="px-4 py-4"><Skeleton className="h-3 w-16 ml-auto" /></td>
+                    <td className="px-4 py-4"><Skeleton className="h-4 w-12 rounded-md ml-auto" /></td>
+                    <td className="px-4 py-4">
+                        <div className="space-y-1.5 ml-auto w-16">
+                            <Skeleton className="h-2.5 w-full" />
+                            <Skeleton className="h-2 w-full" />
+                        </div>
+                    </td>
+                    <td className="px-4 py-4"><Skeleton className="h-3 w-20 ml-auto" /></td>
+                    <td className="px-4 py-4"><Skeleton className="h-7 w-24 rounded-lg ml-auto" /></td>
+                    <td className="pr-4 py-4"><Skeleton className="h-7 w-16 rounded-xl ml-auto" /></td>
                 </tr>
             ))}
         </>
     )
 }
-
-// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export function MarketPage() {
     useDocumentTitle('Markets')
@@ -379,7 +358,6 @@ export function MarketPage() {
         else { setSortKey(key); setSortDir('desc') }
     }
 
-    // ── Highlight cards data — always from full list ───────────────────────────
     const highlights = useMemo(() => {
         if (!coins) return { gainers: [], losers: [], volume: [] }
         const sortedByChange = [...coins].sort((a, b) => b.priceChangePercentage24h - a.priceChangePercentage24h)
@@ -390,10 +368,8 @@ export function MarketPage() {
         }
     }, [coins])
 
-    // ── Main filtering ──────────────────────────────────────────────────────────
     const filtered = useMemo(() => {
         if (!coins) return []
-        // 1. Main tab filter
         let result: CryptoListResponse[]
         if (mainTab === 'favorites') {
             const watchedIds = new Set(watchlist.map(w => w.coinId))
@@ -403,14 +379,11 @@ export function MarketPage() {
         } else {
             result = [...coins]
         }
-        // 2. Sub-tab filter
         result = applySubFilter(result, subTab)
-        // 3. Search
         if (search.trim()) {
             const q = search.toLowerCase()
             result = result.filter(c => c.name.toLowerCase().includes(q) || c.symbol.toLowerCase().includes(q))
         }
-        // 4. Sort
         result.sort((a, b) => {
             const av = a[sortKey] as number
             const bv = b[sortKey] as number
@@ -429,85 +402,78 @@ export function MarketPage() {
     }
 
     return (
-        <div className="space-y-5 max-w-7xl">
+        <div className="space-y-6 max-w-7xl">
             {/* ── Header ── */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">Markets</h1>
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Market Crypto</h1>
+                    <p className="text-sm text-gray-500 mt-1">Real-time crypto asset tracking and analytics</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    {!isLoading && <LiveBadge connected={connected} />}
-                    <button
+                    {!isLoading && <Badge variant={connected ? 'success' : 'neutral'} dot>{connected ? 'Live Prices' : 'Offline'}</Badge>}
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => refetch()}
-                        disabled={isFetching}
-                        className="flex items-center gap-2 text-xs text-gray-400 hover:text-indigo-400 bg-gray-900 border border-gray-800 hover:border-indigo-500/40 px-3 py-2 rounded-xl transition-all duration-150 disabled:opacity-50"
+                        loading={isFetching}
                     >
-                        <RefreshCw size={13} className={cn(isFetching && 'animate-spin')} />
-                        {isFetching ? 'Đang tải...' : 'Cập nhật'}
-                    </button>
+                        <RefreshCw size={12} className={cn(!isFetching && 'mr-1')} />
+                        {!isFetching && 'Refresh'}
+                    </Button>
                 </div>
             </div>
 
-            {/* ── Category tabs (top) + Search ── */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-6 border-b border-gray-800 -mb-px">
-                    {MAIN_TABS.map(({ id, label }) => (
-                        <button
-                            key={id}
-                            onClick={() => setMainTab(id)}
-                            className={cn(
-                                'pb-3 text-sm font-medium transition border-b-2',
-                                mainTab === id
-                                    ? 'text-white border-indigo-500'
-                                    : 'text-gray-500 hover:text-gray-300 border-transparent',
-                            )}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
+            {/* ── Category tabs + Search ── */}
+            <div className="flex items-center justify-between flex-wrap gap-4 border-b border-white/[0.06]">
+                <Tabs
+                    tabs={MAIN_TABS}
+                    active={mainTab}
+                    onChange={(id) => setMainTab(id as MainTab)}
+                />
 
                 {/* Search */}
-                <div className="relative">
-                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                <div className="relative pb-3">
+                    <Search size={14} className="absolute left-3.5 top-[15px] text-gray-500" />
                     <input
                         type="text"
-                        placeholder="Search"
+                        placeholder="Search assets..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-56 pl-9 pr-8 py-2 bg-gray-900 border border-gray-800 text-white placeholder-gray-600 rounded-xl text-sm outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition"
+                        className="w-64 pl-10 pr-8 py-2 bg-navy-800/60 backdrop-blur-sm border border-white/[0.08] text-white placeholder-gray-500 rounded-xl text-sm outline-none focus:border-accent-cyan/40 focus:ring-1 focus:ring-accent-cyan/20 transition-all duration-200"
                     />
                     {search && (
                         <button
                             onClick={() => setSearch('')}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 text-sm transition"
-                        >✕</button>
+                            className="absolute right-3 top-[15px] text-gray-500 hover:text-gray-300 text-xs transition"
+                        >
+                            ✕
+                        </button>
                     )}
                 </div>
             </div>
 
             {/* ── 3 Highlight cards ── */}
             {!isLoading && !isError && coins && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <HighlightCard
-                        title="Gainers"
-                        icon={<TrendingUp size={15} />}
+                        title="Top Gainers"
+                        icon={<TrendingUp size={14} />}
                         accent="green"
                         items={highlights.gainers}
                         type="gain"
                         onClickItem={(id) => navigate(`/market/${id}`)}
                     />
                     <HighlightCard
-                        title="Top losers"
-                        icon={<TrendingDown size={15} />}
+                        title="Top Losers"
+                        icon={<TrendingDown size={14} />}
                         accent="red"
                         items={highlights.losers}
                         type="loss"
                         onClickItem={(id) => navigate(`/market/${id}`)}
                     />
                     <HighlightCard
-                        title="Top volume"
-                        icon={<Flame size={15} />}
+                        title="Top Volume"
+                        icon={<Flame size={14} />}
                         accent="gold"
                         items={highlights.volume}
                         type="volume"
@@ -517,44 +483,34 @@ export function MarketPage() {
             )}
 
             {/* ── Sub-tabs ── */}
-            <div className="flex items-center gap-1 flex-wrap bg-gray-900/50 border border-gray-800 rounded-xl p-1 w-fit">
-                {SUB_TABS.map(({ id, label }) => (
-                    <button
-                        key={id}
-                        onClick={() => setSubTab(id)}
-                        className={cn(
-                            'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150',
-                            subTab === id
-                                ? 'bg-gray-800 text-white shadow-sm'
-                                : 'text-gray-400 hover:text-gray-200',
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+            <Tabs
+                variant="pills"
+                tabs={SUB_TABS}
+                active={subTab}
+                onChange={(id) => setSubTab(id as SubTab)}
+            />
 
             {/* ── Table ── */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div className="glass-card overflow-hidden">
                 {isError ? (
                     <div className="py-16 text-center">
-                        <p className="text-red-400 text-sm mb-3">Không thể tải dữ liệu thị trường.</p>
-                        <button onClick={() => refetch()} className="text-xs text-indigo-400 hover:text-indigo-300 underline transition">
-                            Thử lại
-                        </button>
+                        <p className="text-red-400 text-sm mb-3 font-semibold">Failed to fetch market data.</p>
+                        <Button variant="outline" size="sm" onClick={() => refetch()}>
+                            Try Again
+                        </Button>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-gray-800 bg-gray-950/40">
-                                    <th className="pl-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Name</th>
+                                <tr className="border-b border-white/[0.06] bg-navy-950/40">
+                                    <th className="pl-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Asset</th>
                                     <SortTh col="currentPrice"             label="Price"      {...sortProps} />
                                     <SortTh col="priceChangePercentage24h" label="24h Change" {...sortProps} />
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">24h Low / High</th>
+                                    <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">24h Low / High</th>
                                     <SortTh col="totalVolume"              label="24h Volume" {...sortProps} />
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Market Trends</th>
-                                    <th className="pr-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Operation</th>
+                                    <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">7D Sparkline</th>
+                                    <th className="pr-6 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -562,15 +518,17 @@ export function MarketPage() {
                                     <SkeletonRows />
                                 ) : filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="py-16 text-center">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <Search size={28} className="text-gray-700" />
-                                                <p className="text-gray-400 text-sm font-medium">
+                                        <td colSpan={7} className="py-20 text-center">
+                                            <div className="flex flex-col items-center justify-center gap-3">
+                                                <div className="w-12 h-12 rounded-2xl bg-white/[0.03] flex items-center justify-center text-gray-500">
+                                                    <Search size={20} />
+                                                </div>
+                                                <p className="text-gray-400 text-sm font-semibold">
                                                     {mainTab === 'favorites' && watchlist.length === 0
-                                                        ? 'Chưa có coin nào trong Favorites. Bấm ⭐ để thêm.'
+                                                        ? 'No assets in your watchlist. Star an asset to add it here.'
                                                         : search
-                                                            ? `Không tìm thấy "${search}"`
-                                                            : 'Không có coin nào trong filter này'}
+                                                            ? `No results found for "${search}"`
+                                                            : 'No assets matching this filter'}
                                                 </p>
                                             </div>
                                         </td>
@@ -597,10 +555,10 @@ export function MarketPage() {
 
             {/* ── Footer count ── */}
             {!isLoading && !isError && (
-                <p className="text-xs text-center text-gray-600">
-                    {filtered.length} / {coins?.length ?? 0} coin
+                <p className="text-xs text-center text-gray-500 font-medium">
+                    Showing {filtered.length} of {coins?.length ?? 0} assets
                     {connected && (
-                        <span className="ml-2 text-emerald-600">· giá cập nhật realtime từ Binance</span>
+                        <span className="ml-1 text-emerald-500 font-semibold">· prices update in real-time</span>
                     )}
                 </p>
             )}

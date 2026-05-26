@@ -6,6 +6,8 @@ import { getTopCryptos } from '@/api/crypto'
 import { formatUSD, formatPct } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { CryptoListResponse } from '@/types'
+import { Card } from '@/components/ui/Card'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 // ─── CoinSelector ──────────────────────────────────────────────────────────────
 function CoinSelector({
@@ -37,25 +39,25 @@ function CoinSelector({
 
     return (
         <div className="relative">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">{label}</p>
+            <p className="text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">{label}</p>
             <button
                 onClick={() => setOpen((o) => !o)}
-                className="flex items-center gap-2 w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl transition"
+                className="flex items-center gap-2.5 w-full px-4 py-2.5 bg-navy-950/60 border border-white/[0.08] hover:border-white/[0.12] rounded-xl transition duration-150"
             >
                 {value ? (
                     <>
-                        <img src={value.image} alt={value.name} className="w-6 h-6 rounded-full shrink-0" />
-                        <span className="font-semibold text-gray-900 dark:text-white text-sm">{value.symbol.toUpperCase()}</span>
-                        <span className="text-gray-400 dark:text-gray-500 text-xs">{value.name}</span>
+                        <img src={value.image} alt={value.name} className="w-5 h-5 rounded-full shrink-0" />
+                        <span className="font-bold text-white text-sm uppercase">{value.symbol}</span>
+                        <span className="text-gray-500 font-semibold text-xs">{value.name}</span>
                     </>
                 ) : (
-                    <span className="text-gray-400 dark:text-gray-500 text-sm">Chọn coin...</span>
+                    <span className="text-gray-500 text-sm font-semibold">Chọn coin...</span>
                 )}
                 <ChevronDown size={14} className="ml-auto text-gray-400" />
             </button>
 
             {open && (
-                <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute top-full mt-1.5 left-0 right-0 z-50 bg-navy-900 border border-white/[0.08] rounded-xl shadow-glass overflow-hidden animate-scale-in">
                     <div className="p-2">
                         <input
                             autoFocus
@@ -63,27 +65,27 @@ function CoinSelector({
                             placeholder="Tìm coin..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:border-brand-500 text-gray-900 dark:text-white placeholder-gray-400"
+                            className="w-full px-3 py-2 text-sm bg-navy-950 border border-white/[0.08] rounded-lg outline-none focus:border-accent-cyan/40 text-white placeholder-gray-500 font-semibold"
                         />
                     </div>
-                    <ul className="max-h-52 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800">
+                    <ul className="max-h-52 overflow-y-auto divide-y divide-white/[0.04]">
                         {filtered.slice(0, 30).map((c) => (
                             <li key={c.id}>
                                 <button
                                     onClick={() => select(c)}
-                                    className="flex items-center gap-2.5 w-full px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-white/[0.03] transition text-left"
                                 >
-                                    <img src={c.image} alt={c.name} className="w-6 h-6 rounded-full shrink-0" />
+                                    <img src={c.image} alt={c.name} className="w-5 h-5 rounded-full shrink-0" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{c.symbol.toUpperCase()}</p>
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{c.name}</p>
+                                        <p className="text-sm font-bold text-white uppercase leading-none">{c.symbol}</p>
+                                        <p className="text-[10px] text-gray-500 font-semibold uppercase mt-0.5 truncate leading-none">{c.name}</p>
                                     </div>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{formatUSD(c.currentPrice)}</span>
+                                    <span className="text-xs font-mono font-semibold text-gray-400 shrink-0">{formatUSD(c.currentPrice)}</span>
                                 </button>
                             </li>
                         ))}
                         {filtered.length === 0 && (
-                            <li className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+                            <li className="px-4 py-6 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
                                 Không tìm thấy coin
                             </li>
                         )}
@@ -97,9 +99,9 @@ function CoinSelector({
 // ─── Rate info row ─────────────────────────────────────────────────────────────
 function RateRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500 dark:text-gray-400">{label}</span>
-            <span className="font-medium text-gray-900 dark:text-white">{value}</span>
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
+            <span className="text-gray-500">{label}</span>
+            <span className="font-mono text-white text-xs">{value}</span>
         </div>
     )
 }
@@ -175,18 +177,18 @@ export function ConvertPage() {
     const canConvert = !!fromCoin && !!toCoin && parseFloat(fromAmt) > 0 && fromCoin.id !== toCoin.id
 
     return (
-        <div className="max-w-5xl space-y-5">
+        <div className="max-w-5xl space-y-6 animate-fade-in">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chuyển đổi</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Mô phỏng chuyển đổi giữa các coin theo giá thị trường thực tế</p>
+                <h1 className="text-2xl font-extrabold text-white tracking-tight leading-tight">Chuyển đổi</h1>
+                <p className="text-xs text-gray-500 font-semibold mt-0.5 uppercase tracking-wider">Mô phỏng chuyển đổi giữa các coin theo giá thị trường thực tế</p>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-5 items-start">
+            <div className="flex flex-col lg:flex-row gap-6 items-start">
                 {/* ── Convert Card ── */}
-                <div className="w-full lg:max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-5">
+                <Card className="w-full lg:max-w-md p-5 space-y-5">
                     {/* From */}
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                         <CoinSelector
                             label="Từ"
                             value={fromCoin}
@@ -200,16 +202,16 @@ export function ConvertPage() {
                                 placeholder="0.00"
                                 value={fromAmt}
                                 onChange={(e) => setFromAmt(e.target.value)}
-                                className="w-full px-3 py-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl text-lg font-semibold text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900 transition"
+                                className="w-full px-4 py-3 bg-navy-950/60 border border-white/[0.08] rounded-xl text-lg font-mono font-bold text-white placeholder-gray-600 outline-none focus:border-accent-cyan/40 transition hover:border-white/[0.12] duration-200"
                             />
                             {fromCoin && (
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400">
-                                    {fromCoin.symbol.toUpperCase()}
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400 uppercase">
+                                    {fromCoin.symbol}
                                 </span>
                             )}
                         </div>
                         {usdValue !== null && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 pl-1">≈ {formatUSD(usdValue)}</p>
+                            <p className="text-[10px] text-gray-500 pl-1 font-bold font-mono">≈ {formatUSD(usdValue)}</p>
                         )}
                     </div>
 
@@ -217,30 +219,30 @@ export function ConvertPage() {
                     <div className="flex justify-center">
                         <button
                             onClick={handleSwap}
-                            className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-full transition text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400"
+                            className="p-2.5 bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12] hover:text-accent-cyan rounded-full transition text-gray-400 active:scale-95"
                         >
-                            <ArrowDownUp size={18} />
+                            <ArrowDownUp size={16} />
                         </button>
                     </div>
 
                     {/* To */}
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                         <CoinSelector
                             label="Đến"
                             value={toCoin}
                             coins={coins.filter((c) => c.id !== fromCoin?.id)}
                             onChange={setToCoin}
                         />
-                        <div className="relative px-3 py-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <div className="relative px-4 py-3.5 bg-navy-950/40 border border-white/[0.04] rounded-xl min-h-[50px] flex items-center justify-between">
                             <span className={cn(
-                                'text-lg font-semibold',
-                                toAmt ? 'text-gray-900 dark:text-white' : 'text-gray-300 dark:text-gray-600',
+                                'text-lg font-mono font-bold',
+                                toAmt ? 'text-white' : 'text-gray-600',
                             )}>
                                 {toAmt || '0.00'}
                             </span>
                             {toCoin && (
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400">
-                                    {toCoin.symbol.toUpperCase()}
+                                <span className="text-sm font-bold text-gray-400 uppercase">
+                                    {toCoin.symbol}
                                 </span>
                             )}
                         </div>
@@ -248,25 +250,25 @@ export function ConvertPage() {
 
                     {/* Rate info */}
                     {rate !== null && fromCoin && toCoin && (
-                        <div className="space-y-2.5 p-3.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-sm">
+                        <div className="space-y-2.5 p-3.5 bg-navy-950/60 border border-white/[0.04] rounded-xl text-sm">
                             <RateRow label="Tỷ giá" value={`1 ${fromCoin.symbol.toUpperCase()} = ${rate.toFixed(6)} ${toCoin.symbol.toUpperCase()}`} />
                             <RateRow label={`Giá ${fromCoin.symbol.toUpperCase()}`} value={formatUSD(fromCoin.currentPrice)} />
                             <RateRow label={`Giá ${toCoin.symbol.toUpperCase()}`} value={formatUSD(toCoin.currentPrice)} />
                             <div className="flex gap-3 pt-1">
                                 <span className={cn(
-                                    'flex items-center gap-1 text-xs font-medium',
+                                    'flex items-center gap-1 text-[10px] font-bold font-mono',
                                     fromCoin.priceChangePercentage24h >= 0
-                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                        : 'text-red-500 dark:text-red-400',
+                                        ? 'text-emerald-400'
+                                        : 'text-red-400',
                                 )}>
                                     {fromCoin.priceChangePercentage24h >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                                     {fromCoin.symbol.toUpperCase()} {formatPct(fromCoin.priceChangePercentage24h)}
                                 </span>
                                 <span className={cn(
-                                    'flex items-center gap-1 text-xs font-medium',
+                                    'flex items-center gap-1 text-[10px] font-bold font-mono',
                                     toCoin.priceChangePercentage24h >= 0
-                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                        : 'text-red-500 dark:text-red-400',
+                                        ? 'text-emerald-400'
+                                        : 'text-red-400',
                                 )}>
                                     {toCoin.priceChangePercentage24h >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                                     {toCoin.symbol.toUpperCase()} {formatPct(toCoin.priceChangePercentage24h)}
@@ -276,9 +278,9 @@ export function ConvertPage() {
                     )}
 
                     {/* Info */}
-                    <div className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-xl p-3">
-                        <Info size={13} className="mt-0.5 shrink-0 text-blue-400" />
-                        Đây là mô phỏng — không có giao dịch thực tế. Giá được lấy từ CoinGecko API.
+                    <div className="flex items-start gap-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-accent-cyan/5 border border-accent-cyan/10 rounded-xl p-3.5 leading-normal">
+                        <Info size={14} className="mt-0.5 shrink-0 text-accent-cyan" />
+                        Đây là mô phỏng — không có giao dịch thực tế. Giá lấy từ CoinGecko API.
                     </div>
 
                     {/* Button */}
@@ -286,12 +288,12 @@ export function ConvertPage() {
                         onClick={handleConvert}
                         disabled={!canConvert || loading || isLoading}
                         className={cn(
-                            'w-full py-3 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2',
+                            'w-full py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 uppercase tracking-wider shadow-glow',
                             success
                                 ? 'bg-emerald-500 text-white'
                                 : canConvert
-                                    ? 'bg-brand-600 hover:bg-brand-700 text-white'
-                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed',
+                                    ? 'bg-gradient-to-r from-accent-cyan to-accent-purple text-white hover:brightness-110'
+                                    : 'bg-white/[0.02] border border-white/[0.04] text-gray-500 cursor-not-allowed',
                         )}
                     >
                         {loading ? (
@@ -299,24 +301,22 @@ export function ConvertPage() {
                         ) : success ? (
                             <>✓ Chuyển đổi thành công!</>
                         ) : (
-                            <><Zap size={15} /> Chuyển đổi ngay</>
+                            <><Zap size={14} /> Chuyển đổi ngay</>
                         )}
                     </button>
-                </div>
+                </Card>
 
                 {/* ── Right panel ── */}
                 <div className="flex-1 space-y-4 w-full">
                     {/* Quick picks */}
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Cặp phổ biến</h3>
+                    <Card className="p-5">
+                        <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Cặp phổ biến</h3>
                         {isLoading ? (
                             <div className="space-y-2">
-                                {Array.from({ length: 4 }).map((_, i) => (
-                                    <div key={i} className="h-10 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
-                                ))}
+                                {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 rounded-xl animate-pulse" />)}
                             </div>
                         ) : (
-                            <div className="space-y-1.5">
+                            <div className="space-y-1">
                                 {[
                                     ['bitcoin', 'ethereum'],
                                     ['ethereum', 'tether'],
@@ -332,16 +332,16 @@ export function ConvertPage() {
                                         <button
                                             key={`${fId}-${tId}`}
                                             onClick={() => { setFromCoin(f); setToCoin(t) }}
-                                            className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition group text-left"
+                                            className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-white/[0.02] rounded-xl transition duration-150 text-left"
                                         >
                                             <div className="flex -space-x-2 shrink-0">
-                                                <img src={f.image} className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-900" alt={f.name} />
-                                                <img src={t.image} className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-900" alt={t.name} />
+                                                <img src={f.image} className="w-5 h-5 rounded-full border border-navy-900" alt={f.name} />
+                                                <img src={t.image} className="w-5 h-5 rounded-full border border-navy-900" alt={t.name} />
                                             </div>
-                                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                {f.symbol.toUpperCase()} / {t.symbol.toUpperCase()}
+                                            <span className="text-xs font-bold text-white uppercase tracking-tight">
+                                                {f.symbol} / {t.symbol}
                                             </span>
-                                            <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
+                                            <span className="text-xs font-mono font-semibold text-gray-500 ml-auto">
                                                 {r < 0.001 ? r.toFixed(8) : r.toFixed(4)}
                                             </span>
                                         </button>
@@ -349,13 +349,13 @@ export function ConvertPage() {
                                 })}
                             </div>
                         )}
-                    </div>
+                    </Card>
 
                     {/* History */}
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Lịch sử chuyển đổi</h3>
+                    <Card className="p-5">
+                        <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Lịch sử chuyển đổi</h3>
                         {history.length === 0 ? (
-                            <div className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                            <div className="py-8 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
                                 Chưa có giao dịch nào
                             </div>
                         ) : (
@@ -363,23 +363,23 @@ export function ConvertPage() {
                                 {history.map((rec) => (
                                     <div
                                         key={rec.id}
-                                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-sm"
+                                        className="flex items-center justify-between p-3 bg-navy-950/60 border border-white/[0.04] rounded-xl text-xs font-medium"
                                     >
                                         <div>
-                                            <span className="font-semibold text-gray-900 dark:text-white">
+                                            <span className="font-bold text-white font-mono">
                                                 {rec.fromAmt.toLocaleString()} {rec.from}
                                             </span>
-                                            <span className="text-gray-400 dark:text-gray-500 mx-2">→</span>
-                                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                            <span className="text-gray-500 mx-2">→</span>
+                                            <span className="font-bold text-emerald-400 font-mono">
                                                 {Number(rec.toAmt).toLocaleString(undefined, { maximumFractionDigits: 6 })} {rec.to}
                                             </span>
                                         </div>
-                                        <span className="text-xs text-gray-400 dark:text-gray-500">{rec.time}</span>
+                                        <span className="text-[10px] text-gray-500 font-bold uppercase font-mono">{rec.time}</span>
                                     </div>
                                 ))}
                             </div>
                         )}
-                    </div>
+                    </Card>
                 </div>
             </div>
         </div>

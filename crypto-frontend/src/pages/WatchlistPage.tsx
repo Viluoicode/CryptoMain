@@ -6,6 +6,9 @@ import { getTopCryptos } from '@/api/crypto'
 import { useWatchlist } from '@/hooks/useWatchlist'
 import { formatUSD, formatPct, formatMarketCap } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/Card'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 export function WatchlistPage() {
     const navigate = useNavigate()
@@ -21,15 +24,15 @@ export function WatchlistPage() {
     const watched = (coins ?? []).filter(c => isWatched(c.id))
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-7xl animate-fade-in">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <div className="bg-amber-500 rounded-lg p-2">
-                    <Star size={20} className="text-white" fill="white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border border-yellow-500/20 rounded-xl flex items-center justify-center text-yellow-400 shrink-0">
+                    <Star size={18} fill="currentColor" className="animate-pulse" />
                 </div>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Watchlist</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <h1 className="text-2xl font-extrabold text-white tracking-tight leading-tight">Watchlist</h1>
+                    <p className="text-xs text-gray-500 font-semibold mt-0.5 uppercase tracking-wider">
                         {watchlist.length > 0
                             ? `${watchlist.length} coin đang theo dõi`
                             : 'Chưa có coin nào — thêm từ trang Market'}
@@ -38,84 +41,78 @@ export function WatchlistPage() {
             </div>
 
             {isLoading ? (
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8">
-                    <div className="space-y-3">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
-                        ))}
-                    </div>
+                <div className="space-y-2.5">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 rounded-xl animate-pulse" />)}
                 </div>
             ) : watched.length === 0 ? (
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 py-20 flex flex-col items-center gap-3 text-gray-400">
-                    <StarOff size={48} className="opacity-30" />
-                    <p className="text-sm font-medium">Watchlist trống</p>
-                    <p className="text-xs">Nhấn ⭐ trên trang Market để thêm coin vào đây</p>
-                    <button
-                        onClick={() => navigate('/market')}
-                        className="mt-2 px-4 py-2 text-sm font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition"
-                    >
-                        Đi tới Market
-                    </button>
-                </div>
+                <EmptyState
+                    icon={<StarOff size={24} />}
+                    title="Watchlist trống"
+                    description="Nhấn ⭐ trên trang Market để thêm coin vào danh sách theo dõi."
+                    action={{
+                        label: 'Đi tới Market',
+                        onClick: () => navigate('/market')
+                    }}
+                />
             ) : (
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <Card padding="none" className="overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Coin</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Giá</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">24h %</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Market Cap</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Volume 24h</th>
-                                    <th className="px-4 py-3 w-12" />
+                                <tr className="border-b border-white/[0.06] bg-navy-950/20">
+                                    <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Coin</th>
+                                    <th className="px-5 py-3.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Giá</th>
+                                    <th className="px-5 py-3.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">24h %</th>
+                                    <th className="px-5 py-3.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Market Cap</th>
+                                    <th className="px-5 py-3.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Volume 24h</th>
+                                    <th className="px-5 py-3.5 w-12" />
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                            <tbody className="divide-y divide-white/[0.04]">
                                 {watched.map(coin => {
                                     const positive = coin.priceChangePercentage24h >= 0
                                     return (
                                         <tr
                                             key={coin.id}
                                             onClick={() => navigate(`/market/${coin.id}`)}
-                                            className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition group"
+                                            className="hover:bg-white/[0.02] cursor-pointer transition duration-150 group"
                                         >
-                                            <td className="px-4 py-3.5">
-                                                <div className="flex items-center gap-2.5">
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex items-center gap-3">
                                                     <img src={coin.image} alt={coin.name} loading="lazy" decoding="async" className="w-7 h-7 rounded-full shrink-0" />
                                                     <div>
-                                                        <p className="font-semibold text-gray-900 dark:text-white">{coin.name}</p>
-                                                        <p className="text-xs text-gray-400 uppercase">{coin.symbol}</p>
+                                                        <p className="font-bold text-white uppercase text-sm leading-tight">{coin.name}</p>
+                                                        <p className="text-[10px] text-gray-500 font-semibold uppercase mt-0.5 leading-none">{coin.symbol}</p>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3.5 text-right font-semibold text-gray-900 dark:text-white">
+                                            <td className="px-5 py-3.5 text-right font-mono font-bold text-white text-sm">
                                                 {formatUSD(coin.currentPrice)}
                                             </td>
-                                            <td className="px-4 py-3.5 text-right">
+                                            <td className="px-5 py-3.5 text-right">
                                                 <span className={cn(
-                                                    'inline-flex items-center gap-1 font-medium text-sm',
-                                                    positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400',
+                                                    'inline-flex items-center gap-1 font-mono font-bold text-xs',
+                                                    positive ? 'text-emerald-400' : 'text-red-400',
                                                 )}>
-                                                    {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                                                    {positive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
                                                     {formatPct(coin.priceChangePercentage24h)}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3.5 text-right text-gray-500 dark:text-gray-400">
+                                            <td className="px-5 py-3.5 text-right font-mono font-semibold text-xs text-gray-400">
                                                 {formatMarketCap(coin.marketCap)}
                                             </td>
-                                            <td className="px-4 py-3.5 text-right text-gray-500 dark:text-gray-400">
+                                            <td className="px-5 py-3.5 text-right font-mono font-semibold text-xs text-gray-400">
                                                 {formatMarketCap(coin.totalVolume)}
                                             </td>
-                                            <td className="px-4 py-3.5 text-right" onClick={e => e.stopPropagation()}>
+                                            <td className="px-5 py-3.5 text-right" onClick={e => e.stopPropagation()}>
                                                 <button
                                                     onClick={() => toggle(coin.id, coin.symbol)}
                                                     title="Bỏ theo dõi"
-                                                    className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
+                                                    className="p-1.5 rounded-xl hover:bg-white/[0.05] text-amber-400 transition"
                                                 >
                                                     <Star
-                                                        size={16}
-                                                        className="text-amber-400 fill-amber-400"
+                                                        size={15}
+                                                        className="fill-amber-400"
                                                     />
                                                 </button>
                                             </td>
@@ -125,7 +122,7 @@ export function WatchlistPage() {
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </Card>
             )}
         </div>
     )

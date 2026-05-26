@@ -11,8 +11,10 @@ import { apiClient } from '@/api/client'
 import { cn } from '@/lib/utils'
 import type { TransactionType } from '@/types'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { Card } from '@/components/ui/Card'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 20
 
 function fmt(n: number) {
@@ -31,28 +33,28 @@ function DeleteConfirm({
     onConfirm, onCancel, busy,
 }: { onConfirm: () => void; onCancel: () => void; busy: boolean }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm">
-                <h3 className="text-base font-semibold text-white mb-2">
-                    Delete Transaction
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md px-4 animate-fade-in">
+            <div className="bg-navy-900 border border-white/[0.08] rounded-2xl shadow-glass p-6 w-full max-w-sm animate-scale-in">
+                <h3 className="text-base font-bold text-white mb-2 uppercase tracking-wider">
+                    Xóa giao dịch
                 </h3>
-                <p className="text-sm text-gray-400 mb-5">
-                    This action cannot be undone. The transaction will be permanently removed.
+                <p className="text-xs text-gray-500 mb-5 font-semibold leading-relaxed">
+                    Hành động này không thể hoàn tác. Giao dịch sẽ bị xóa vĩnh viễn khỏi ví của bạn.
                 </p>
-                <div className="flex gap-3 justify-end">
+                <div className="flex gap-2.5 justify-end">
                     <button
                         onClick={onCancel}
                         disabled={busy}
-                        className="px-4 py-2 text-sm rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors"
+                        className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-white hover:bg-white/[0.05] rounded-xl transition duration-150 uppercase tracking-wider"
                     >
-                        Cancel
+                        Hủy
                     </button>
                     <button
                         onClick={onConfirm}
                         disabled={busy}
-                        className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        className="px-4 py-2 text-xs font-bold bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-40 disabled:pointer-events-none transition duration-150 uppercase tracking-wider"
                     >
-                        {busy ? 'Deleting…' : 'Delete'}
+                        {busy ? 'Đang xóa…' : 'Xóa'}
                     </button>
                 </div>
             </div>
@@ -62,16 +64,16 @@ function DeleteConfirm({
 
 // ── Stat card ──────────────────────────────────────────────────────────────
 function StatCard({
-    label, value, icon: Icon, color,
-}: { label: string; value: string; icon: typeof TrendingUp; color: string }) {
+    label, value, icon: Icon, color, bg,
+}: { label: string; value: string; icon: typeof TrendingUp; color: string; bg: string }) {
     return (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 flex items-center gap-4">
-            <div className={cn('rounded-lg p-2.5', color)}>
-                <Icon size={18} className="text-white" />
+        <div className="glass-card px-5 py-4 hover-glow transition-all duration-200 flex items-center gap-4 hover:border-white/[0.1]">
+            <div className={cn('rounded-xl p-2.5 border', bg)}>
+                <Icon size={18} className={color} />
             </div>
             <div>
-                <p className="text-xs text-gray-500">{label}</p>
-                <p className="text-lg font-bold text-white font-mono">{value}</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{label}</p>
+                <p className="text-lg font-bold text-white font-mono mt-0.5 leading-none">{value}</p>
             </div>
         </div>
     )
@@ -88,14 +90,14 @@ function SortHeader({
         <button
             onClick={() => onClick(col)}
             className={cn(
-                'inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors',
-                active ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-200',
+                'inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-150',
+                active ? 'text-accent-cyan' : 'text-gray-500 hover:text-gray-300',
             )}
         >
             {label}
             {active
-                ? (dir === 'desc' ? <ArrowDown size={11} /> : <ArrowUp size={11} />)
-                : <ArrowUpDown size={11} className="opacity-40" />}
+                ? (dir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />)
+                : <ArrowUpDown size={12} className="opacity-30" />}
         </button>
     )
 }
@@ -125,7 +127,6 @@ export function TransactionsPage() {
     })
     const deleteMut = useDeleteTransaction()
 
-    // Debounce search input
     const handleSearchChange = useCallback((val: string) => {
         setSearch(val)
         setPage(1)
@@ -135,7 +136,6 @@ export function TransactionsPage() {
         }, 400)
     }, [])
 
-    // ── Derived ────────────────────────────────────────────────────────────
     const items = data?.items ?? []
     const totalCount = data?.totalCount ?? 0
     const totalPages = data?.totalPages ?? 1
@@ -143,16 +143,15 @@ export function TransactionsPage() {
     const buyTotal = items.filter(t => t.type === (1 as TransactionType)).reduce((s, t) => s + t.totalAmount, 0)
     const sellTotal = items.filter(t => t.type === (2 as TransactionType)).reduce((s, t) => s + t.totalAmount, 0)
 
-    // ── Handlers ───────────────────────────────────────────────────────────
     function handleDeleteConfirm() {
         if (!pendingDelete) return
         deleteMut.mutate(pendingDelete, {
             onSuccess: () => {
-                toast.success('Transaction deleted')
+                toast.success('Đã xóa giao dịch')
                 setPendingDelete(null)
             },
             onError: () => {
-                toast.error('Failed to delete transaction')
+                toast.error('Xóa giao dịch thất bại')
                 setPendingDelete(null)
             },
         })
@@ -178,9 +177,9 @@ export function TransactionsPage() {
             a.download = `transactions_${new Date().toISOString().slice(0, 10)}.csv`
             a.click()
             URL.revokeObjectURL(url)
-            toast.success('CSV exported successfully')
+            toast.success('Đã xuất file CSV')
         } catch {
-            toast.error('Failed to export CSV')
+            toast.error('Xuất file CSV thất bại')
         } finally {
             setExporting(false)
         }
@@ -196,18 +195,17 @@ export function TransactionsPage() {
         setPage(1)
     }
 
-    // ── Render ─────────────────────────────────────────────────────────────
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-7xl animate-fade-in">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <div className="bg-indigo-600 rounded-lg p-2">
-                    <ClipboardList size={20} className="text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-accent-cyan/20 to-accent-purple/20 border border-accent-cyan/15 rounded-xl flex items-center justify-center text-accent-cyan shrink-0 animate-pulse">
+                    <ClipboardList size={20} />
                 </div>
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Transactions</h1>
-                    <p className="text-sm text-gray-500">
-                        {totalCount > 0 ? `${totalCount} total transactions` : 'All your buy & sell history'}
+                    <h1 className="text-2xl font-extrabold text-white tracking-tight leading-tight">Transactions</h1>
+                    <p className="text-xs text-gray-500 font-semibold mt-0.5 uppercase tracking-wider">
+                        {totalCount > 0 ? `${totalCount} tổng giao dịch` : 'Lịch sử giao dịch mua & bán'}
                     </p>
                 </div>
             </div>
@@ -215,9 +213,9 @@ export function TransactionsPage() {
             {/* Stats strip */}
             {!isLoading && items.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatCard label="Total Transactions" value={totalCount.toString()} icon={ClipboardList} color="bg-indigo-600" />
-                    <StatCard label="Buy Volume (page)" value={`$${fmt(buyTotal)}`} icon={TrendingUp} color="bg-emerald-600" />
-                    <StatCard label="Sell Volume (page)" value={`$${fmt(sellTotal)}`} icon={TrendingDown} color="bg-red-500" />
+                    <StatCard label="Tổng giao dịch" value={totalCount.toString()} icon={ClipboardList} color="text-accent-cyan" bg="bg-accent-cyan/10 border-accent-cyan/20" />
+                    <StatCard label="Mua (Trang này)" value={`$${fmt(buyTotal)}`} icon={TrendingUp} color="text-emerald-400" bg="bg-emerald-500/10 border-emerald-500/20" />
+                    <StatCard label="Bán (Trang này)" value={`$${fmt(sellTotal)}`} icon={TrendingDown} color="text-red-400" bg="bg-red-500/10 border-red-500/20" />
                 </div>
             )}
 
@@ -225,29 +223,29 @@ export function TransactionsPage() {
             <div className="flex flex-col sm:flex-row gap-3">
                 {/* Search */}
                 <div className="relative flex-1">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                     <input
                         value={search}
                         onChange={e => handleSearchChange(e.target.value)}
-                        placeholder="Search coin name or symbol…"
-                        className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-gray-700 bg-gray-900 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500"
+                        placeholder="Tìm kiếm theo tên hoặc mã coin…"
+                        className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-white/[0.08] bg-navy-950/60 text-white placeholder-gray-500 outline-none focus:border-accent-cyan/40 focus:ring-1 focus:ring-accent-cyan/20 hover:border-white/[0.12] transition duration-200 font-medium"
                     />
                 </div>
 
                 {/* Filter tabs */}
-                <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1 shrink-0">
+                <div className="flex gap-0.5 bg-navy-950 border border-white/[0.04] rounded-xl p-1 shrink-0">
                     {(['All', 'Buy', 'Sell'] as FilterType[]).map(f => (
                         <button
                             key={f}
                             onClick={() => handleFilterChange(f)}
                             className={cn(
-                                'px-4 py-1.5 text-sm font-medium rounded-md transition-colors',
+                                'px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 uppercase tracking-wider',
                                 filter === f
-                                    ? 'bg-indigo-600 text-white shadow-sm'
-                                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800',
+                                    ? 'bg-gradient-to-r from-accent-cyan/20 to-accent-purple/20 text-accent-cyan border border-accent-cyan/35'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/[0.02]',
                             )}
                         >
-                            {f}
+                            {f === 'All' ? 'Tất cả' : f === 'Buy' ? 'Mua' : 'Bán'}
                         </button>
                     ))}
                 </div>
@@ -256,140 +254,119 @@ export function TransactionsPage() {
                 <button
                     onClick={handleExportCsv}
                     disabled={exporting || totalCount === 0}
-                    title="Export to CSV"
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                    title="Xuất file CSV"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.03] disabled:opacity-40 disabled:cursor-not-allowed transition duration-150 uppercase tracking-wider shrink-0"
                 >
-                    <Download size={15} />
-                    {exporting ? 'Exporting…' : 'Export CSV'}
+                    <Download size={14} />
+                    {exporting ? 'Đang xuất…' : 'Xuất CSV'}
                 </button>
             </div>
 
             {/* Table */}
-            <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+            <Card padding="none" className="overflow-hidden">
                 {isLoading ? (
-                    <div className="space-y-0 divide-y divide-gray-800/50">
-                        {/* Skeleton header */}
-                        <div className="px-4 py-3 bg-gray-800/40 flex gap-6">
-                            {[80, 140, 90, 90, 90, 80, 80].map((w, i) => (
-                                <div key={i} className="h-3 bg-gray-700 animate-pulse rounded" style={{ width: w }} />
-                            ))}
-                        </div>
-                        {Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="px-4 py-4 flex items-center gap-4">
-                                <div className="w-16 h-6 bg-gray-800 animate-pulse rounded-full" />
-                                <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 bg-gray-800 animate-pulse rounded-full" />
-                                    <div className="w-24 h-4 bg-gray-800 animate-pulse rounded" />
-                                </div>
-                                <div className="ml-auto flex gap-8">
-                                    {[64, 80, 80, 60, 72].map((w, j) => (
-                                        <div key={j} className="h-3 bg-gray-800 animate-pulse rounded" style={{ width: w }} />
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+                    <div className="space-y-2.5 p-5">
+                        {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}
                     </div>
                 ) : items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-                        <ClipboardList size={48} className="mb-4 opacity-20" />
-                        <p className="text-sm font-medium text-gray-400">No transactions found</p>
-                        <p className="text-xs mt-1">
-                            {search ? 'Try a different search term' : 'Add transactions from your wallet page'}
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon={<ClipboardList size={24} />}
+                        title="Không tìm thấy giao dịch nào"
+                        description={search ? 'Thử tìm kiếm với từ khóa khác' : 'Thêm giao dịch từ trang chi tiết ví của bạn'}
+                    />
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-gray-800 bg-gray-800/40">
-                                    <th className="text-left px-4 py-3">
-                                        <SortHeader col="type" label="Type" current={sortCol} dir={sortDir} onClick={handleSort} />
+                                <tr className="border-b border-white/[0.06] bg-navy-950/20">
+                                    <th className="text-left px-5 py-3.5">
+                                        <SortHeader col="type" label="Loại" current={sortCol} dir={sortDir} onClick={handleSort} />
                                     </th>
-                                    <th className="text-left px-4 py-3">
+                                    <th className="text-left px-5 py-3.5">
                                         <SortHeader col="coin" label="Coin" current={sortCol} dir={sortDir} onClick={handleSort} />
                                     </th>
-                                    <th className="text-right px-4 py-3">
-                                        <SortHeader col="quantity" label="Quantity" current={sortCol} dir={sortDir} onClick={handleSort} />
+                                    <th className="text-right px-5 py-3.5">
+                                        <SortHeader col="quantity" label="Số lượng" current={sortCol} dir={sortDir} onClick={handleSort} />
                                     </th>
-                                    <th className="text-right px-4 py-3">
-                                        <SortHeader col="price" label="Price" current={sortCol} dir={sortDir} onClick={handleSort} />
+                                    <th className="text-right px-5 py-3.5">
+                                        <SortHeader col="price" label="Giá" current={sortCol} dir={sortDir} onClick={handleSort} />
                                     </th>
-                                    <th className="text-right px-4 py-3">
-                                        <SortHeader col="amount" label="Total" current={sortCol} dir={sortDir} onClick={handleSort} />
+                                    <th className="text-right px-5 py-3.5">
+                                        <SortHeader col="amount" label="Tổng tiền" current={sortCol} dir={sortDir} onClick={handleSort} />
                                     </th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Wallet</th>
-                                    <th className="text-left px-4 py-3">
-                                        <SortHeader col="date" label="Date" current={sortCol} dir={sortDir} onClick={handleSort} />
+                                    <th className="text-left px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wider">Ví</th>
+                                    <th className="text-left px-5 py-3.5">
+                                        <SortHeader col="date" label="Ngày" current={sortCol} dir={sortDir} onClick={handleSort} />
                                     </th>
-                                    <th className="px-4 py-3" />
+                                    <th className="px-5 py-3.5" />
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-800/50">
+                            <tbody className="divide-y divide-white/[0.04]">
                                 {items.map(tx => {
                                     const isBuy = tx.type === 1
                                     return (
                                         <tr
                                             key={tx.id}
                                             className={cn(
-                                                'transition-colors hover:bg-gray-800/30',
+                                                'transition-colors duration-150 hover:bg-white/[0.02]',
                                                 isFetching ? 'opacity-60' : '',
                                             )}
                                         >
                                             {/* Type badge */}
-                                            <td className="px-4 py-3">
+                                            <td className="px-5 py-3.5">
                                                 <span className={cn(
-                                                    'inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full',
+                                                    'inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border',
                                                     isBuy
-                                                        ? 'bg-emerald-500/10 text-emerald-400'
-                                                        : 'bg-red-500/10 text-red-400',
+                                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                                        : 'bg-red-500/10 border-red-500/20 text-red-400',
                                                 )}>
-                                                    {isBuy ? <ArrowDownLeft size={11} /> : <ArrowUpRight size={11} />}
+                                                    {isBuy ? <ArrowDownLeft size={12} /> : <ArrowUpRight size={12} />}
                                                     {tx.typeDisplay}
                                                 </span>
                                             </td>
 
                                             {/* Coin */}
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center shrink-0">
-                                                        <span className="text-xs font-bold text-gray-300">
-                                                            {tx.coinSymbol.slice(0, 2).toUpperCase()}
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-cyan/20 to-accent-purple/20 border border-accent-cyan/15 flex items-center justify-center shrink-0">
+                                                        <span className="text-[10px] font-bold text-accent-cyan uppercase">
+                                                            {tx.coinSymbol.slice(0, 2)}
                                                         </span>
                                                     </div>
                                                     <div>
-                                                        <p className="font-medium text-white">{tx.coinSymbol.toUpperCase()}</p>
-                                                        <p className="text-xs text-gray-500">{tx.coinName}</p>
+                                                        <p className="font-bold text-white uppercase text-sm leading-tight">{tx.coinSymbol}</p>
+                                                        <p className="text-[10px] text-gray-500 font-semibold uppercase mt-0.5 leading-none">{tx.coinName}</p>
                                                     </div>
                                                 </div>
                                             </td>
 
-                                            <td className="px-4 py-3 text-right font-mono text-gray-300">
+                                            <td className="px-5 py-3.5 text-right font-mono text-gray-300 font-semibold text-xs">
                                                 {tx.quantity.toFixed(6)}
                                             </td>
-                                            <td className="px-4 py-3 text-right font-mono text-gray-300">
+                                            <td className="px-5 py-3.5 text-right font-mono text-gray-500 text-xs">
                                                 ${fmt(tx.pricePerCoin)}
                                             </td>
-                                            <td className="px-4 py-3 text-right font-mono font-semibold text-white">
+                                            <td className="px-5 py-3.5 text-right font-mono font-bold text-white text-sm">
                                                 ${fmt(tx.totalAmount)}
                                             </td>
 
                                             {/* Wallet */}
-                                            <td className="px-4 py-3">
-                                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-600/20 text-indigo-400 font-medium border border-indigo-500/20">
+                                            <td className="px-5 py-3.5">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/[0.04] text-gray-400 border border-white/[0.06]">
                                                     {tx.walletName}
                                                 </span>
                                             </td>
 
-                                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                                            <td className="px-5 py-3.5 text-gray-500 font-medium font-mono text-xs whitespace-nowrap">
                                                 {fmtDate(tx.transactionDate)}
                                             </td>
 
                                             {/* Actions */}
-                                            <td className="px-4 py-3">
+                                            <td className="px-5 py-3.5">
                                                 <button
                                                     onClick={() => setPendingDelete(tx.id)}
-                                                    title="Delete transaction"
-                                                    className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                    title="Xóa giao dịch"
+                                                    className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -401,28 +378,28 @@ export function TransactionsPage() {
                         </table>
                     </div>
                 )}
-            </div>
+            </Card>
 
             {/* Pagination */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-between text-sm">
-                    <p className="text-gray-500">
-                        Page {page} of {totalPages} · {totalCount} total
+                <div className="flex items-center justify-between text-xs flex-wrap gap-3">
+                    <p className="text-gray-500 font-semibold uppercase tracking-wider">
+                        Trang {page} / {totalPages} · {totalCount} giao dịch
                     </p>
                     <div className="flex gap-2">
                         <button
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             disabled={page === 1 || isFetching}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.03] disabled:opacity-40 disabled:pointer-events-none transition font-bold uppercase tracking-wider"
                         >
-                            <ChevronLeft size={14} /> Prev
+                            <ChevronLeft size={13} /> Trước
                         </button>
                         <button
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             disabled={page === totalPages || isFetching}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.03] disabled:opacity-40 disabled:pointer-events-none transition font-bold uppercase tracking-wider"
                         >
-                            Next <ChevronRight size={14} />
+                            Sau <ChevronRight size={13} />
                         </button>
                     </div>
                 </div>

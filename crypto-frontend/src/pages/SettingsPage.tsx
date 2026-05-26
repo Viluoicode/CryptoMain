@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import { changePasswordApi, updateProfileApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/Card'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type Section = 'profile' | 'security' | 'notifications' | 'privacy'
@@ -56,14 +57,14 @@ function ProfileSection({ username, email }: { username: string; email: string }
 
             {/* Avatar placeholder */}
             <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center shrink-0">
-                    <span className="text-2xl font-bold text-brand-600 dark:text-brand-400">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-cyan/20 to-accent-purple/20 border border-accent-cyan/15 flex items-center justify-center shrink-0">
+                    <span className="text-2xl font-bold text-accent-cyan">
                         {(name || username).charAt(0).toUpperCase()}
                     </span>
                 </div>
                 <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{name || username}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{email}</p>
+                    <p className="text-sm font-bold text-white leading-tight">{name || username}</p>
+                    <p className="text-xs text-gray-500 font-semibold mt-0.5">{email}</p>
                 </div>
             </div>
 
@@ -83,9 +84,9 @@ function ProfileSection({ username, email }: { username: string; email: string }
                     <input
                         value={email}
                         disabled
-                        className={cn(inputCls, 'opacity-60 cursor-not-allowed')}
+                        className={cn(inputCls, 'opacity-40 cursor-not-allowed')}
                     />
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    <p className="text-[10px] font-semibold text-gray-500 mt-1.5 uppercase tracking-wider">
                         Email không thể thay đổi.
                     </p>
                 </Field>
@@ -138,7 +139,7 @@ function SecuritySection() {
 
             {/* Change password */}
             <div className="space-y-4 max-w-md">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Đổi mật khẩu</h3>
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-1">Đổi mật khẩu</h3>
 
                 <Field label="Mật khẩu hiện tại">
                     <div className="relative">
@@ -152,7 +153,7 @@ function SecuritySection() {
                         <button
                             type="button"
                             onClick={() => setShowPwd((p) => !p)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
                         >
                             {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
@@ -179,7 +180,7 @@ function SecuritySection() {
                     />
                 </Field>
 
-                {error && <p className="text-xs text-red-500">{error}</p>}
+                {error && <p className="text-xs text-red-400 font-bold">{error}</p>}
             </div>
 
             <div className="flex items-center gap-3">
@@ -190,13 +191,13 @@ function SecuritySection() {
 
             {/* 2FA placeholder */}
             <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Xác thực 2 bước (2FA)</h3>
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl max-w-md">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Xác thực 2 bước (2FA)</h3>
+                <div className="flex items-center justify-between p-4 bg-navy-950/60 border border-white/[0.04] rounded-xl max-w-md">
                     <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">Google Authenticator</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Chưa kích hoạt</p>
+                        <p className="text-sm font-bold text-white leading-tight">Google Authenticator</p>
+                        <p className="text-[10px] text-gray-500 font-semibold uppercase mt-1">Chưa kích hoạt</p>
                     </div>
-                    <button className="text-xs text-brand-600 dark:text-brand-400 font-medium hover:underline">
+                    <button className="text-xs text-accent-cyan font-bold hover:underline">
                         Kích hoạt
                     </button>
                 </div>
@@ -222,7 +223,7 @@ function NotificationsSection() {
             <SectionHeader title="Thông báo" desc="Chọn loại thông báo bạn muốn nhận." />
 
             <div className="space-y-2 max-w-md">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Email</h3>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Email</h3>
                 <ToggleRow
                     label="Cảnh báo giá"
                     desc="Khi coin đạt mức giá bạn đặt"
@@ -240,7 +241,7 @@ function NotificationsSection() {
             <Divider />
 
             <div className="space-y-2 max-w-md">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Push</h3>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Push</h3>
                 <ToggleRow
                     label="Biến động giá"
                     desc="Biến động > 5% trong 24h"
@@ -270,13 +271,13 @@ function PrivacySection() {
                 ].map(({ label, desc }) => (
                     <button
                         key={label}
-                        className="flex w-full items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition group"
+                        className="flex w-full items-center justify-between p-4 bg-navy-950/60 border border-white/[0.04] hover:bg-white/[0.02] rounded-xl transition group text-left"
                     >
-                        <div className="text-left">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500">{desc}</p>
+                        <div>
+                            <p className="text-sm font-bold text-white leading-tight">{label}</p>
+                            <p className="text-xs text-gray-500 font-semibold mt-1">{desc}</p>
                         </div>
-                        <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition" />
+                        <ChevronRight size={16} className="text-gray-500 group-hover:text-white transition" />
                     </button>
                 ))}
             </div>
@@ -287,12 +288,12 @@ function PrivacySection() {
 // ─── Shared atoms ─────────────────────────────────────────────────────────────
 
 const inputCls =
-    'w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900 transition'
+    'w-full px-4 py-2.5 bg-navy-950/60 border border-white/[0.08] text-white placeholder-gray-500 rounded-xl text-sm outline-none focus:border-accent-cyan/40 focus:ring-1 focus:ring-accent-cyan/20 hover:border-white/[0.12] transition duration-200 font-semibold'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
             {children}
         </div>
     )
@@ -301,14 +302,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function SectionHeader({ title, desc }: { title: string; desc: string }) {
     return (
         <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
+            <h2 className="text-base font-bold text-white uppercase tracking-wider">{title}</h2>
+            <p className="text-xs text-gray-500 font-semibold mt-0.5 uppercase tracking-wider">{desc}</p>
         </div>
     )
 }
 
 function Divider() {
-    return <hr className="border-gray-100 dark:border-gray-800" />
+    return <hr className="border-white/[0.06]" />
 }
 
 function SaveButton({ loading, saved, onClick }: { loading: boolean; saved: boolean; onClick: () => void }) {
@@ -317,10 +318,10 @@ function SaveButton({ loading, saved, onClick }: { loading: boolean; saved: bool
             onClick={onClick}
             disabled={loading || saved}
             className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition',
+                'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition uppercase tracking-wider',
                 saved
-                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60',
+                    ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold'
+                    : 'bg-gradient-to-r from-accent-cyan to-accent-purple text-white shadow-glow hover:brightness-110 disabled:opacity-60',
             )}
         >
             {saved ? (
@@ -338,22 +339,22 @@ function ToggleRow({ label, desc, checked, onChange }: {
     label: string; desc: string; checked: boolean; onChange: () => void
 }) {
     return (
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+        <div className="flex items-center justify-between p-4 bg-navy-950/60 border border-white/[0.04] rounded-xl">
             <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{desc}</p>
+                <p className="text-sm font-bold text-white leading-tight">{label}</p>
+                <p className="text-xs text-gray-500 font-semibold mt-1">{desc}</p>
             </div>
             <button
                 onClick={onChange}
                 className={cn(
-                    'relative w-10 h-5.5 rounded-full transition-colors',
-                    checked ? 'bg-brand-600' : 'bg-gray-200 dark:bg-gray-700',
+                    'relative w-10 rounded-full transition-colors duration-200 border border-white/[0.08]',
+                    checked ? 'bg-accent-cyan border-accent-cyan/20 shadow-glow' : 'bg-navy-950',
                 )}
                 style={{ height: '22px', width: '40px' }}
             >
                 <span
                     className={cn(
-                        'absolute top-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform',
+                        'absolute top-0.5 bg-white rounded-full shadow-sm transition-transform duration-200',
                         checked ? 'translate-x-[19px]' : 'translate-x-0.5',
                     )}
                     style={{ height: '18px', width: '18px' }}
@@ -382,26 +383,26 @@ export function SettingsPage() {
     }[activeSection]
 
     return (
-        <div className="max-w-4xl space-y-5">
+        <div className="max-w-4xl space-y-6 animate-fade-in">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Cài đặt</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Quản lý tài khoản và tuỳ chọn cá nhân</p>
+                <h1 className="text-2xl font-extrabold text-white tracking-tight leading-tight">Cài đặt</h1>
+                <p className="text-xs text-gray-500 font-semibold mt-0.5 uppercase tracking-wider">Quản lý tài khoản và tuỳ chọn cá nhân</p>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-6">
                 {/* Sidebar */}
                 <aside className="w-full md:w-56 shrink-0">
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-2 space-y-0.5">
+                    <Card padding="none" className="p-2 space-y-1">
                         {SECTIONS.map(({ id, label, icon }) => (
                             <button
                                 key={id}
                                 onClick={() => setActiveSection(id)}
                                 className={cn(
-                                    'flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
+                                    'flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors duration-150',
                                     activeSection === id
-                                        ? 'bg-brand-50 dark:bg-brand-600/20 text-brand-700 dark:text-brand-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+                                        ? 'bg-gradient-to-r from-accent-cyan/20 to-accent-purple/20 text-accent-cyan border border-accent-cyan/35'
+                                        : 'text-gray-400 hover:bg-white/[0.02] hover:text-white',
                                 )}
                             >
                                 {icon}
@@ -409,22 +410,22 @@ export function SettingsPage() {
                             </button>
                         ))}
 
-                        <div className="pt-1 mt-1 border-t border-gray-100 dark:border-gray-800">
+                        <div className="pt-1.5 mt-1.5 border-t border-white/[0.06]">
                             <button
                                 onClick={handleLogout}
-                                className="flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                className="flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/10 transition-colors duration-150"
                             >
                                 <LogOut size={16} />
                                 Đăng xuất
                             </button>
                         </div>
-                    </div>
+                    </Card>
                 </aside>
 
                 {/* Content */}
-                <div className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
+                <Card className="flex-1 p-6">
                     {content}
-                </div>
+                </Card>
             </div>
         </div>
     )

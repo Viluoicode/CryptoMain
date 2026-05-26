@@ -1,0 +1,1 @@
+import{r}from"./vendor-react-V1Yju8R0.js";const e=" · CryptoDash";function u(t){r.useEffect(()=>{if(!t)return;const o=document.title;return document.title=t.endsWith(e)?t:`${t}${e}`,()=>{document.title=o}},[t])}export{u};

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,7 +8,129 @@
   * {
     box-sizing: border-box;
   }
+
+  html {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-navy-900 text-gray-100 antialiased font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Custom scrollbar ─────────────────────────────────────── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  }
+
+  /* ── Selection ────────────────────────────────────────────── */
+  ::selection {
+    background: rgba(0, 89, 251, 0.3);
+    color: #e0f2fe;
+  }
+}
+
+@layer components {
+  /* ── Glassmorphism ────────────────────────────────────────── */
+  .glass {
+    @apply bg-navy-800/60 backdrop-blur-xl border border-white/[0.06] shadow-glass;
+  }
+
+  .glass-strong {
+    @apply bg-navy-800/80 backdrop-blur-2xl border border-white/[0.08] shadow-glass;
+  }
+
+  .glass-card {
+    @apply bg-gradient-to-br from-navy-800/70 to-navy-900/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl shadow-glass;
+  }
+
+  /* ── Gradient text ────────────────────────────────────────── */
+  .gradient-text {
+    @apply bg-gradient-to-r from-accent-cyan to-accent-purple bg-clip-text text-transparent;
+  }
+
+  .gradient-text-gold {
+    @apply bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-400 bg-clip-text text-transparent;
+  }
+
+  /* ── Price flash ──────────────────────────────────────────── */
+  .flash-up {
+    animation: flashUp 700ms ease-out forwards;
+  }
+  .flash-down {
+    animation: flashDown 700ms ease-out forwards;
+  }
+
+  /* ── Shimmer skeleton ─────────────────────────────────────── */
+  .skeleton {
+    @apply rounded-lg;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.06) 50%,
+      rgba(255, 255, 255, 0.03) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+
+  /* ── Gradient border trick ────────────────────────────────── */
+  .gradient-border {
+    position: relative;
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(0,89,251,0.3), rgba(0,198,255,0.3));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* ── Glow effect on hover ─────────────────────────────────── */
+  .hover-glow {
+    @apply transition-shadow duration-300;
+  }
+  .hover-glow:hover {
+    @apply shadow-glow;
+  }
+
+  /* ── Hide scrollbar utility ───────────────────────────────── */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* ── Animated gradient background ─────────────────────────── */
+  .bg-animated-gradient {
+    background-size: 200% 200%;
+    animation: gradientX 3s ease infinite;
   }
 }

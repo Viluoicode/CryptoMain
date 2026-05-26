@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Allow: /market
+Allow: /leaderboard
+
+# Don't index private/auth pages
+Disallow: /dashboard
+Disallow: /portfolio
+Disallow: /wallets
+Disallow: /transactions
+Disallow: /watchlist
+Disallow: /alerts
+Disallow: /trade
+Disallow: /orders
+Disallow: /onchain
+Disallow: /convert
+Disallow: /settings
+
+Sitemap: https://cryptodash.app/sitemap.xml
